@@ -1,3 +1,15 @@
 __pycache__
 /doc/_build
 /release_sgfmill.conf
+
+# Development environment (this workspace)
+/.venv/
+/sgfmill.egg-info/
+/.tmp/
+/.pytest_cache/
+/.coverage
+/htmlcov/
+
+# Directories created by the sandbox/pytest that cannot be removed here.
+# They are transient and must never be committed.
+/pytest-cache-files-*/
