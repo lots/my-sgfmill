@@ -1,6 +1,11 @@
 Changes
 =======
 
+* Added SGF Toolkit, a Textual application in the :file:`App/` directory which
+  puts the library's functions behind a keyboard-driven interface with a
+  VS Code style file explorer. It is an optional companion: the library itself
+  still has no dependencies.
+
 * Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
   non-standard properties in an |sgf| game and can remove them to produce a
   file that only uses standard properties.

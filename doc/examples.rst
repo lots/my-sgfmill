@@ -109,3 +109,24 @@ scripts.
   This demonstrates the :mod:`~sgfmill.sgf_encoding` module.
 
 
+The SGF Toolkit application
+---------------------------
+
+The :file:`App/` directory holds **SGF Toolkit**, a small `Textual
+<https://textual.textualize.io>`_ application that puts the functions described
+here behind a keyboard-driven interface: a list of operations, a tabbed area of
+results (including an ASCII board diagram), and a file explorer for choosing the
+file to work on.
+
+Unlike the example scripts, it requires a third-party package (``textual``).
+The :mod:`!sgfmill` library itself has no dependencies.
+
+::
+
+    pip install textual
+    python run_sgf_toolkit.py [directory]
+
+See :file:`App/README.md` for the layout, the key bindings, and which library
+call each operation uses.
+
+

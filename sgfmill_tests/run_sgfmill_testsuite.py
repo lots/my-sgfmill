@@ -15,6 +15,7 @@ test_modules = [
     'sgf_normalise_tests',
     'sgf_transform_tests',
     'sgf_encoding_tests',
+    'app_tests',
     ]
 
 def get_test_module(name):
