@@ -10,6 +10,7 @@ __pycache__
 /.coverage
 /htmlcov/
 
-# Directories created by the sandbox/pytest that cannot be removed here.
-# They are transient and must never be committed.
+# Directories created by the sandbox, pytest or pip that cannot be removed
+# here. They are transient and must never be committed.
 /pytest-cache-files-*/
+/.buildtmp/

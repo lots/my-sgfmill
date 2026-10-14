@@ -5,6 +5,11 @@ Changes
   ``tt``, on boards of every size. The older ``tt`` encoding is still accepted
   when reading a board of 19x19 or smaller.
 
+* Bug fix: ``test_installed_sgfmill`` no longer imports the sibling ``sgfmill``
+  directory instead of the installed package when it is invoked by an absolute
+  path. It also no longer uses the ``imp`` module, which was removed in Python
+  3.12.
+
 * Sped up the :class:`.Board` implementation (thanks to Lin, Yong Xiang).
 
 * The minimum Python version is now 3.5.

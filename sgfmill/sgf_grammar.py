@@ -57,7 +57,7 @@ def is_valid_property_identifier(s):
     return bool(_propident_re.search(s))
 
 def is_valid_property_value(bb):
-    """Check whether 'bb' is a well-formed PropValue.
+    r"""Check whether 'bb' is a well-formed PropValue.
 
     bb -- bytes-like object
 
