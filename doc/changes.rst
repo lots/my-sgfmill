@@ -15,6 +15,11 @@ Changes
   target in the file explorer, choose an action, see the result), and a single
   message pane across the bottom describing the highlighted action.
 
+  Selecting one of the four board transformations draws the resulting board
+  straight away, so the effect can be seen before anything is written; ``Run``
+  then saves that result. The file that was opened is never transformed in
+  place.
+
 * Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
   non-standard properties in an |sgf| game and can remove them to produce a
   file that only uses standard properties.

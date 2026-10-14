@@ -128,24 +128,24 @@ class MessageBar(Static):
             "New .sgf file.",
         ),
         "rotate_cw": (
-            "Turn the board 90 degrees clockwise.",
-            "Output file: where to write.",
-            "New .sgf file.",
+            "Preview the board turned 90 degrees clockwise.",
+            "Output file: where Run saves it.",
+            None,
         ),
         "rotate_acw": (
-            "Turn the board 90 degrees anticlockwise.",
-            "Output file: where to write.",
-            "New .sgf file.",
+            "Preview the board turned 90 degrees anticlockwise.",
+            "Output file: where Run saves it.",
+            None,
         ),
         "flip_v": (
-            "Flip the board vertically: left and right swap.",
-            "Output file: where to write.",
-            "New .sgf file.",
+            "Preview the board flipped vertically (left/right swap).",
+            "Output file: where Run saves it.",
+            None,
         ),
         "flip_h": (
-            "Flip the board horizontally: top and bottom swap.",
-            "Output file: where to write.",
-            "New .sgf file.",
+            "Preview the board flipped horizontally (top/bottom swap).",
+            "Output file: where Run saves it.",
+            None,
         ),
         "split": (
             "Split a multi-game file into one file per game.",
@@ -275,14 +275,29 @@ class SgfToolkitApp(App):
         ("moves",      "List moves",                   None, ""),
         ("check",      "Check for non-standard props", None, ""),
         ("clean",      "Clean non-standard -> file",   "Output file", "-clean"),
-        ("to_utf8",    "Convert to UTF-8 -> file",     "Output file", "-utf8"),
+        ("to_utf8",    "Convert to UTF-8 -> file",     "Output file", ""),
         ("rotate_cw",  "Turn board 90 clockwise",      "Output file", "-rotate_cw"),
-        ("rotate_acw", "Turn board 90 anticlockwise",  "Output file", "-rotate_acw"),
-        ("flip_v",     "Flip board vertically",        "Output file", "-flip_vertical"),
-        ("flip_h",     "Flip board horizontally",      "Output file", "-flip_horizontal"),
+        ("rotate_acw", "Turn board 90 anticlockwise",  "Output file", "-rotate_cw"),
+        ("flip_v",     "Flip board vertically",        "Output file", "-rotate_cw"),
+        ("flip_h",     "Flip board horizontally",      "Output file", "-rotate_cw"),
         ("split",      "Split collection -> directory", "Output directory", "_files"),
         ("save",       "Save back to the file",        None, ""),
     ]
+
+    #: The board transformations, and the words used for them in the caption.
+    #: Selecting one of these actions previews the result; Run saves it.
+    BOARD_TRANSFORMS = {
+        "rotate_cw": (sgf_transform.ROTATE_CW, "clockwise turn"),
+        "rotate_acw": (sgf_transform.ROTATE_ACW, "anticlockwise turn"),
+        "flip_v": (sgf_transform.FLIP_VERTICAL, "vertical flip"),
+        "flip_h": (sgf_transform.FLIP_HORIZONTAL, "horizontal flip"),
+    }
+
+    #: transformation -> the words used for it, for looking up a caption.
+    BOARD_TRANSFORMS_BY_VALUE = {
+        transformation: words
+        for transformation, words in BOARD_TRANSFORMS.values()
+    }
 
     def __init__(self, start_dir):
         super().__init__()
@@ -386,6 +401,8 @@ class SgfToolkitApp(App):
             input_widget.value = self._default_parameter(identifier, default)
         self.query_one(MessageBar).update_message(
             identifier, self.path.name if self.path else None)
+        # Show what a board transformation would do, before it is saved.
+        self._update_preview(identifier)
 
     def _set_parameter_prompt(self, prompt):
         """Show which target the parameter applies to, and what is wanted."""
@@ -404,10 +421,26 @@ class SgfToolkitApp(App):
         source = Path(self.path)
         if identifier == "split":
             return str(source.with_name(source.stem + "_files"))
-        if identifier == "board":
+        if identifier in ("board", "to_utf8"):
             return ""
         # Suggest a new name; _output_path() avoids collisions.
         return str(source.with_name(source.stem + default + source.suffix))
+
+    def _update_preview(self, identifier):
+        """Draw the board that the selected action is about.
+
+        The point of a flip or a turn is what the board becomes, so the result
+        is shown as soon as the action is selected, and 'Run' then only has to
+        save it. Selecting anything else puts the plain final position back, so
+        a stale preview can't be mistaken for the file's contents.
+        """
+        if self.game is None:
+            return
+        if identifier in self.BOARD_TRANSFORMS:
+            transformation, _words = self.BOARD_TRANSFORMS[identifier]
+            self._show_board(transform=transformation)
+        else:
+            self._show_board()
 
     def _update_target_bar(self):
         """Describe the target, on one line above the result tabs."""
@@ -563,9 +596,18 @@ class SgfToolkitApp(App):
         self._show_board(move_number)
         self._show("tab-board")
 
-    def _show_board(self, move_number=None):
+    def _show_board(self, move_number=None, transform=None):
+        """Draw a position, optionally after a board transformation.
+
+        'transform' is one of the sgf_transform constants; it is applied to a
+        copy of the game, so the target itself is not changed.
+        """
+        game = self.game
+        if transform is not None:
+            game = self._reparse()
+            sgf_transform.transform_game(game, transform)
         try:
-            board, plays = sgf_moves.get_setup_and_moves(self.game)
+            board, plays = sgf_moves.get_setup_and_moves(game)
         except ValueError as e:
             self._set_view("board-view", Text(str(e), style="bold red"))
             return
@@ -581,13 +623,22 @@ class SgfToolkitApp(App):
                 break
         caption = Text()
         caption.append(self.path.name, style="bold")
-        if move_number is None:
+        if transform is not None:
+            caption.append("   PREVIEW: %s"
+                           % self.BOARD_TRANSFORMS_BY_VALUE[transform],
+                           style="bold yellow")
+            caption.append("   (Run saves it)", style="dim")
+        elif move_number is None:
             caption.append("   final position, %d moves" % len(plays))
         else:
             caption.append("   before move %d" % move_number)
         self._set_view("board-view",
                        Text.assemble(caption, "\n\n",
                                      Text(ascii_boards.render_board(board))))
+        if transform is not None:
+            self._show("tab-board")
+            self._note("Previewing the board %s (not saved yet)"
+                       % self.BOARD_TRANSFORMS_BY_VALUE[transform])
 
     # 2 -- game information
     def op_info(self):
@@ -772,28 +823,34 @@ class SgfToolkitApp(App):
         self._note("%s -> %s (UTF-8)" % (self.path.name, target.name),
                    style="green")
 
-    # 9-12 -- transforms
+    # 9-12 -- transforms. Selecting one previews the result on the Board tab;
+    # running it saves that result (Run does not re-preview, and refuses to
+    # write over the target, so the file you opened is never turned in place).
     def op_rotate_cw(self):
-        self._transform(sgf_transform.ROTATE_CW, "-rotate_cw",
-                        "turned clockwise")
+        self._transform("rotate_cw")
 
     def op_rotate_acw(self):
-        self._transform(sgf_transform.ROTATE_ACW, "-rotate_acw",
-                        "turned anticlockwise")
+        self._transform("rotate_acw")
 
     def op_flip_v(self):
-        self._transform(sgf_transform.FLIP_VERTICAL, "-flip_vertical",
-                        "flipped vertically")
+        self._transform("flip_v")
 
     def op_flip_h(self):
-        self._transform(sgf_transform.FLIP_HORIZONTAL, "-flip_horizontal",
-                        "flipped horizontally")
+        self._transform("flip_h")
 
-    def _transform(self, transformation, suffix, description):
+    def _transform(self, identifier):
         if not self._require_file():
             return
+        transformation, description = self.BOARD_TRANSFORMS[identifier]
         target = self._output_path()
         if target is None:
+            return
+        if target == Path(self.path):
+            self.notify("That would overwrite the file you opened. Give a "
+                        "different output name, or use Save.",
+                        title="Not written", severity="error")
+            self._note("Refused to %s over the target file" % description,
+                       style="bold red")
             return
         # Transforms modify a game in place, so work on a fresh parse and leave
         # the loaded game alone until the user saves.

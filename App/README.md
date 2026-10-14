@@ -135,6 +135,15 @@ Arrow keys and Enter drive the operations list and the file tree.
   open file".
 * **Relative output names** are resolved against the directory of the target
   file, not the app's working directory.
+* **The four flip and turn actions preview themselves.** Selecting *Turn board
+  90 clockwise*, *Turn board 90 anticlockwise*, *Flip board vertically* or
+  *Flip board horizontally* immediately draws the board it would produce, on
+  the Board tab, captioned `PREVIEW: ... (Run saves it)`. Nothing is written
+  until you press **Run**, which then saves that result to the output file. The
+  target is never turned in place: if the output name is the file you opened,
+  the action refuses and says so (use **Save** for that). Selecting any other
+  action puts the plain final position back, so a preview can't be mistaken for
+  the file's contents.
 * **Collections.** An `.sgf` file may hold several games. Everything except
   *Split* works on the first game, and the target bar says so. *Split* writes
   one file per game.

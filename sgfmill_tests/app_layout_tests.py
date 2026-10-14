@@ -172,6 +172,109 @@ def test_message_bar_can_be_toggled(tc):
                 tc.assertTrue(bar.display)
         _run(scenario())
 
+def test_transform_actions_preview_the_result(tc):
+    """Selecting a flip or turn should show the board it would produce.
+
+    The point of these four actions is what the board becomes, so the result is
+    shown as soon as the action is selected; Run then only saves it.
+    """
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                original = _text_of(app, "#board-view")
+
+                # Turn the board a quarter-turn clockwise. The black stone is
+                # at (2, 2); clockwise it becomes (2, 6).
+                app._set_action([o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                await pilot.pause()
+                preview = _text_of(app, "#board-view")
+                tc.assertNotEqual(preview, original)
+                tc.assertIn("PREVIEW", preview)
+                tc.assertIn("clockwise", preview)
+                # The preview must actually be the transformed position: the
+                # stone moves from C3 to G3.
+                tc.assertIn("3  .  .  .  .  .  .  #  .  .", preview)
+                # Nothing has been written yet, and the game is unchanged.
+                tc.assertFalse(list(Path(tmp).glob("*-rotate_cw.sgf")))
+                _, plays = _plays(app.game)
+                tc.assertEqual(plays[0], ("b", (2, 2)))
+
+                # An action that is not a transformation shows the plain board.
+                app._set_action([o[0] for o in app.OPERATIONS].index("info"))
+                await pilot.pause()
+                tc.assertNotIn("PREVIEW", _text_of(app, "#board-view"))
+        _run(scenario())
+
+def test_every_transform_has_a_preview(tc):
+    """All four flip/turn actions preview, and each gives a different board."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                boards = {}
+                for identifier in ("rotate_cw", "rotate_acw", "flip_v",
+                                   "flip_h"):
+                    index = [o[0] for o in app.OPERATIONS].index(identifier)
+                    app._set_action(index)
+                    await pilot.pause()
+                    shown = _text_of(app, "#board-view")
+                    tc.assertIn("PREVIEW", shown,
+                                "%s did not preview" % identifier)
+                    boards[identifier] = shown
+                # Four different transformations of one position.
+                tc.assertEqual(len(set(boards.values())), 4)
+        _run(scenario())
+
+def test_run_saves_the_transformed_board(tc):
+    """Run should write the previewed board, and never over the target."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+        original_bytes = path.read_bytes()
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                app._set_action([o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                await pilot.pause()
+                target = Path(app.query_one("#param-input").value)
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertTrue(target.exists())
+                # The saved file holds the transformed position.
+                saved = sgf.Sgf_game.from_bytes(target.read_bytes())
+                _, plays = _plays(saved)
+                tc.assertEqual(plays[0], ("b", (2, 6)))
+                # ...and the target is untouched.
+                tc.assertEqual(path.read_bytes(), original_bytes)
+
+                # Asking to write over the target is refused, in place of
+                # silently turning the file the user opened.
+                app.query_one("#param-input").value = "-"
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertEqual(path.read_bytes(), original_bytes)
+        _run(scenario())
+
+
+def _plays(game):
+    from sgfmill import sgf_moves
+    return sgf_moves.get_setup_and_moves(game)
+
+
 def test_output_name_is_not_overwritten(tc):
     """Writing to a name that exists should pick a free name instead."""
     with scratch_dir() as tmp:
