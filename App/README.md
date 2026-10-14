@@ -16,17 +16,40 @@ file explorer opens on (the current directory by default).
 pip install textual
 
 # from the repository root
-python run_sgf_toolkit.py
-python run_sgf_toolkit.py examples
+python App/run_sgf_toolkit.py
+python App/run_sgf_toolkit.py examples
 
 # or as a module
 python -m App examples
+
+# the script can also be run from inside App/, or by absolute path
+cd App; python run_sgf_toolkit.py
 ```
+
+It works from any directory: the entry script puts the repository root on
+`sys.path` itself. (Running a script adds *its own* directory to `sys.path`,
+not the directory you started it from, so without that step `import App` would
+fail with `ModuleNotFoundError: No module named 'App'`.)
 
 To try it against the sample files that ship in this repository:
 
 ```powershell
-python run_sgf_toolkit.py examples
+python App/run_sgf_toolkit.py examples
+```
+
+### Without a terminal
+
+Two environment variables let the app start where there is no terminal to drive
+it from (a build server, or a smoke test):
+
+| Variable | Effect |
+| --- | --- |
+| `SGF_TOOLKIT_HEADLESS` | Use Textual's headless driver |
+| `SGF_TOOLKIT_EXIT_AFTER_STARTUP` | Quit once the layout is ready |
+
+```powershell
+$env:SGF_TOOLKIT_EXIT_AFTER_STARTUP = "1"   # start, then quit
+python App/run_sgf_toolkit.py
 ```
 
 ## The layout
@@ -125,13 +148,18 @@ and writing the method.
 
 ## Tests
 
-The app is covered by `sgfmill_tests/app_tests.py`, which drives it headlessly
-with Textual's own test harness (`App.run_test`). The tests load files, run
-every read-only operation, exercise the writing operations against temporary
-directories, and check that a failing operation is reported rather than
-ignored.
+The app is covered by two test modules:
+
+* `sgfmill_tests/app_tests.py` drives it headlessly with Textual's own test
+  harness (`App.run_test`). The tests load files, run every read-only
+  operation, exercise the writing operations against temporary directories, and
+  check that a failing operation is reported rather than ignored.
+* `sgfmill_tests/app_entry_tests.py` runs the entry script for real, in a
+  subprocess, from the repository root and from another directory. It guards
+  the `sys.path` bootstrap described above, which is easy to break and was
+  broken once.
 
 ```powershell
-python -m sgfmill_tests.run_sgfmill_testsuite app_tests
-python -m pytest sgfmill_tests/app_tests.py
+python -m sgfmill_tests.run_sgfmill_testsuite app_tests app_entry_tests
+python -m pytest sgfmill_tests/app_tests.py sgfmill_tests/app_entry_tests.py
 ```

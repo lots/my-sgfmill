@@ -14,6 +14,8 @@ see OPERATIONS for the mapping.
 
 from __future__ import annotations
 
+import os
+import sys
 from pathlib import Path
 
 from rich.console import Group
@@ -764,10 +766,32 @@ class SgfToolkitApp(App):
 
 
 def main(argv=None):
-    import sys
+    """Run the application.
+
+    The board is taken from the first command-line argument, or the current
+    directory.
+
+    Two environment variables are honoured, which is useful when there is no
+    terminal to drive the app from (a test harness, or a build server):
+
+    ``SGF_TOOLKIT_HEADLESS``
+        Run with Textual's headless driver instead of a real terminal.
+    ``SGF_TOOLKIT_EXIT_AFTER_STARTUP``
+        Quit as soon as the layout is ready, instead of waiting for input.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     start_dir = argv[0] if argv else os.getcwd()
-    SgfToolkitApp(start_dir).run()
+    app = SgfToolkitApp(start_dir)
+
+    if os.environ.get("SGF_TOOLKIT_EXIT_AFTER_STARTUP"):
+        async def auto_pilot(pilot):
+            await pilot.pause()
+            await pilot.press("q")
+        app.run(headless=True, auto_pilot=auto_pilot)
+    elif os.environ.get("SGF_TOOLKIT_HEADLESS"):
+        app.run(headless=True)
+    else:
+        app.run()
 
 
 if __name__ == "__main__":

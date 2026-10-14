@@ -16,6 +16,7 @@ test_modules = [
     'sgf_transform_tests',
     'sgf_encoding_tests',
     'app_tests',
+    'app_entry_tests',
     ]
 
 def get_test_module(name):

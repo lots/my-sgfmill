@@ -6,6 +6,11 @@ Changes
   VS Code style file explorer. It is an optional companion: the library itself
   still has no dependencies.
 
+  :file:`App/run_sgf_toolkit.py` adds the repository root to ``sys.path``
+  itself, so it can be run from any directory rather than only from the
+  repository root. Two environment variables (``SGF_TOOLKIT_HEADLESS`` and
+  ``SGF_TOOLKIT_EXIT_AFTER_STARTUP``) let it start where there is no terminal.
+
 * Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
   non-standard properties in an |sgf| game and can remove them to produce a
   file that only uses standard properties.
