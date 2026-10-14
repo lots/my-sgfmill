@@ -18,6 +18,7 @@ test_modules = [
     'app_tests',
     'app_layout_tests',
     'app_entry_tests',
+    'app_launcher_tests',
     ]
 
 def get_test_module(name):

@@ -9,8 +9,22 @@ stays dependency-free, and only this app needs Textual.
 
 ## Running it
 
-Install Textual, then start the app. The optional argument is the directory the
-file explorer opens on (the current directory by default).
+On Windows, `App\run_sgf_toolkit.cmd` is the shortest way in. It uses the
+repository's `.venv` if there is one and otherwise falls back to `python` on
+your `PATH`, so it does not care which directory you are in:
+
+```bat
+App\run_sgf_toolkit.cmd                 :: opens the current directory
+App\run_sgf_toolkit.cmd examples        :: opens that directory
+App\run_sgf_toolkit.cmd --help          :: lists the options and keys
+```
+
+A directory given to it is resolved against the directory you run it from, not
+against `App\`. It also pauses before closing the console, so an error message
+stays readable if you started it by double-clicking.
+
+Otherwise, install Textual and start the app directly. The optional argument is
+the directory the file explorer opens on (the current directory by default).
 
 ```powershell
 pip install textual
@@ -26,6 +40,12 @@ python -m App examples
 cd App; python run_sgf_toolkit.py
 ```
 
+`--help` works here too:
+
+```powershell
+python App/run_sgf_toolkit.py --help
+```
+
 It works from any directory: the entry script puts the repository root on
 `sys.path` itself. (Running a script adds *its own* directory to `sys.path`,
 not the directory you started it from, so without that step `import App` would
@@ -34,7 +54,7 @@ fail with `ModuleNotFoundError: No module named 'App'`.)
 To try it against the sample files that ship in this repository:
 
 ```powershell
-python App/run_sgf_toolkit.py examples
+App\run_sgf_toolkit.cmd examples
 ```
 
 ### Without a terminal
@@ -178,6 +198,7 @@ App/
     __init__.py            package marker
     __main__.py            lets 'python -m App' work
     run_sgf_toolkit.py     the script to run
+    run_sgf_toolkit.cmd    Windows launcher (finds Python, passes a directory)
     sgf_toolkit.py         the application (widgets, operations, CSS)
     README.md              this file
 ```
@@ -191,24 +212,32 @@ appending to that list, writing the method, and adding an entry to
 
 ## Tests
 
-The app is covered by three test modules:
+The app is covered by four test modules:
 
 * `sgfmill_tests/app_tests.py` drives it headlessly with Textual's own test
   harness (`App.run_test`). The tests load files, run every read-only action,
   exercise the writing actions against scratch directories, and check that a
   failing action is reported rather than ignored.
-* `sgfmill_tests/app_layout_tests.py` covers the shape of the window: that the
-  explorer and the action list are on the left with the results beside them and
-  the message pane across the bottom, that it describes the highlighted
-action and names the target, and that writing to a name that already exists
-picks a free name instead.
+* `sgfmill_tests/app_layout_tests.py` covers the shape of the window and the
+  behaviour of the actions: that the three panels share the top row with the
+  message pane across the bottom, that the message describes the highlighted
+  action and names the target, that the board matches the position the library
+  computes (including passes, captures and setup stones), that the flip and
+  turn actions compose into a cycle, and that writing to a name that already
+  exists picks a free name instead.
 * `sgfmill_tests/app_entry_tests.py` runs the entry script for real, in a
   subprocess, from the repository root and from another directory. It guards
   the `sys.path` bootstrap described above, which is easy to break and was
   broken once.
+* `sgfmill_tests/app_launcher_tests.py` runs `run_sgf_toolkit.cmd` for real:
+  with no argument, with a relative directory (which must resolve against the
+  caller's directory, not `App\`), with `--help` (which must print and exit
+  rather than start the interface), and with a directory that does not exist.
 
 ```powershell
-python -m sgfmill_tests.run_sgfmill_testsuite app_tests app_layout_tests app_entry_tests
+python -m sgfmill_tests.run_sgfmill_testsuite `
+    app_tests app_layout_tests app_entry_tests app_launcher_tests
 python -m pytest sgfmill_tests/app_tests.py sgfmill_tests/app_layout_tests.py `
-                sgfmill_tests/app_entry_tests.py
+                sgfmill_tests/app_entry_tests.py `
+                sgfmill_tests/app_launcher_tests.py
 ```

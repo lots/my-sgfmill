@@ -1128,11 +1128,51 @@ class SgfToolkitApp(App):
         explorer.reload()
 
 
+USAGE = """\
+SGF Toolkit - a Textual front end for the sgfmill library.
+
+Usage:
+  run_sgf_toolkit[.cmd] [directory]
+
+The optional argument is the directory the file explorer opens on; the current
+directory is used if it is omitted. It must not begin with '-'.
+
+On screen:
+  1  the file explorer  choose the .sgf file to work on
+  2  the action list    pick what to do, with its parameter beneath
+  3  the result         the board diagram, tables, move list and log
+  the message pane      what the highlighted action does
+
+Keys:
+  Ctrl+J   run the highlighted action
+  Ctrl+A   apply the current flip or turn one more time
+  Escape   reset the board preview
+  e        focus the explorer        a   focus the action list
+  h        hide/show the message pane
+  r        reload the file           s   save it
+  d        open a directory          Ctrl+N  refresh the file list
+  q        quit
+
+Actions which write files suggest a new name and never modify the file you
+opened; only 'Save' writes back to it. The four flip/turn actions preview
+their result first, and compose, so applying a flip twice (or a quarter turn
+four times) returns the board to where it started.
+
+Environment:
+  SGF_TOOLKIT_HEADLESS               use Textual's headless driver
+  SGF_TOOLKIT_EXIT_AFTER_STARTUP     quit once the layout is ready
+
+See README.md in this directory for more.
+"""
+
+_HELP_OPTIONS = ("-h", "--help", "/?", "-?")
+
+
 def main(argv=None):
     """Run the application.
 
     The board is taken from the first command-line argument, or the current
-    directory.
+    directory. '-h', '--help' or '/?' prints the usage instead of starting.
 
     Two environment variables are honoured, which is useful when there is no
     terminal to drive the app from (a test harness, or a build server):
@@ -1143,7 +1183,12 @@ def main(argv=None):
         Quit as soon as the layout is ready, instead of waiting for input.
     """
     argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in _HELP_OPTIONS:
+        print(USAGE)
+        return
     start_dir = argv[0] if argv else os.getcwd()
+    if not os.path.isdir(start_dir):
+        raise SystemExit("not a directory: %s\n\n%s" % (start_dir, USAGE))
     app = SgfToolkitApp(start_dir)
 
     if os.environ.get("SGF_TOOLKIT_EXIT_AFTER_STARTUP"):

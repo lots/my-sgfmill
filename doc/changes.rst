@@ -8,7 +8,11 @@ Changes
 
   :file:`App/run_sgf_toolkit.py` adds the repository root to ``sys.path``
   itself, so it can be run from any directory rather than only from the
-  repository root. Two environment variables (``SGF_TOOLKIT_HEADLESS`` and
+  repository root. :file:`App/run_sgf_toolkit.cmd` is a Windows launcher that
+  finds the interpreter (the repository virtualenv, or ``python`` on the PATH)
+  and passes a directory through, resolved against the caller's directory.
+  ``--help`` on either prints the usage instead of starting the interface. Two
+  environment variables (``SGF_TOOLKIT_HEADLESS`` and
   ``SGF_TOOLKIT_EXIT_AFTER_STARTUP``) let it start where there is no terminal.
 
   The window is two rows: three panels side by side on the top row (select a
