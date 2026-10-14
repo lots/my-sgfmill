@@ -36,6 +36,10 @@ def interpret_go_point(bb, size):
     Raises ValueError if the data is malformed or the coordinates are out of
     range.
 
+    A pass is the empty value, as specified by FF[4]. On boards of 19x19 or
+    smaller the older 'tt' encoding is also accepted, so that files written by
+    older software can be read.
+
     Only supports board sizes up to 26.
 
     The returned coordinates are in the GTP coordinate system, where (0, 0) is
@@ -59,6 +63,10 @@ def serialise_go_point(move, size):
 
     Returns a bytes object.
 
+    A pass is returned as the empty value, as specified by FF[4]. This applies
+    at every board size; note that on boards larger than 19x19 the older 'tt'
+    encoding is not a pass at all, but a real point.
+
     Only supports board sizes up to 26.
 
     The move coordinates are in the GTP coordinate system, where (0, 0) is the
@@ -68,11 +76,7 @@ def serialise_go_point(move, size):
     if not 1 <= size <= 26:
         raise ValueError
     if move is None:
-        # Prefer 'tt' where possible, for the sake of older code
-        if size <= 19:
-            return b"tt"
-        else:
-            return b""
+        return b""
     row, col = move
     if not ((0 <= col < size) and (0 <= row < size)):
         raise ValueError

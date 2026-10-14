@@ -1,6 +1,10 @@
 Changes
 =======
 
+* A pass is now written as the FF[4] empty value (``B[]``) rather than as
+  ``tt``, on boards of every size. The older ``tt`` encoding is still accepted
+  when reading a board of 19x19 or smaller.
+
 * Sped up the :class:`.Board` implementation (thanks to Lin, Yong Xiang).
 
 * The minimum Python version is now 3.5.

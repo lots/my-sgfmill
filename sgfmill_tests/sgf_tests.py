@@ -148,6 +148,34 @@ def test_text_values(tc):
     tc.assertEqual(check(b"(;C[ab\\\nc])"), "abc")
     tc.assertEqual(check(b"(;C[ab\nc])"), "ab\nc")
 
+def test_serialise_pass(tc):
+    # A pass written into the tree uses the FF[4] empty value, on boards of
+    # every size (including sizes where the older 'tt' encoding means a real
+    # point).
+    for size in (9, 19, 20, 21):
+        sgf_game = sgf.Sgf_game(size=size)
+        move = sgf_game.extend_main_sequence()
+        move.set_move("b", None)
+        tc.assertEqual(move.get_move(), ("b", None))
+        tc.assertEqual(sgf_game.serialise(),
+                       b"(;FF[4]CA[UTF-8]GM[1]SZ[%d];B[])\n" % size)
+
+    # Values read from a file are copied through verbatim, so a legacy '[tt]'
+    # pass survives serialisation unchanged.
+    sgf_game = sgf.Sgf_game.from_bytes(b"(;FF[4]GM[1]SZ[19];B[];W[tt])")
+    tc.assertEqual(sgf_game.serialise(), b"(;FF[4]GM[1]SZ[19];B[];W[tt])\n")
+
+    # Setting the property updates the raw value to the FF[4] form.
+    sgf_game.get_last_node().set_move("w", None)
+    tc.assertEqual(sgf_game.get_last_node().get_raw("W"), b"")
+    tc.assertEqual(sgf_game.serialise(), b"(;FF[4]GM[1]SZ[19];B[];W[])\n")
+
+    # On a board larger than 19x19, 'tt' is a real point rather than a pass.
+    sgf_game = sgf.Sgf_game(size=21)
+    sgf_game.extend_main_sequence().set_move("b", (1, 19))
+    tc.assertEqual(sgf_game.serialise(),
+                   b"(;FF[4]CA[UTF-8]GM[1]SZ[21];B[tt])\n")
+
 
 SAMPLE_SGF = b"""\
 (;AP[testsuite:0]CA[utf-8]DT[2009-06-06]FF[4]GM[1]KM[7.5]PB[Black engine]

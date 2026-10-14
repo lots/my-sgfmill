@@ -201,8 +201,12 @@ def test_serialise_move(tc):
     tc.assertEqual(serialise_move((8, 1), 19), b"bk")
     tc.assertEqual(serialise_move((8, 1), 9), b"ba")
     tc.assertEqual(serialise_move((1, 19), 21), b"tt")
-    tc.assertEqual(serialise_move(None, 19), b"tt")
+    # A pass is the empty value in FF[4], on every board size.
+    tc.assertEqual(serialise_move(None, 19), b"")
     tc.assertEqual(serialise_move(None, 20), b"")
+    tc.assertEqual(serialise_move(None, 21), b"")
+    # ...including a size where 'tt' is a real point.
+    tc.assertNotEqual(serialise_move(None, 21), serialise_move((1, 19), 21))
     tc.assertRaises(ValueError, serialise_move, (3, 3), 0)
     tc.assertRaises(ValueError, serialise_move, (3, 3), 27)
     tc.assertRaises(ValueError, serialise_move, (9, 0), 9)
@@ -416,7 +420,7 @@ def test_presenter_serialise(tc):
     tc.assertEqual(p9.serialise('C', "foo\\:b]ar\n"), [b"foo\\\\:b\\]ar\n"])
     tc.assertEqual(p9.serialise('B', (8, 2)), [b"ca"])
     tc.assertEqual(p19.serialise('B', (18, 2)), [b"ca"])
-    tc.assertEqual(p9.serialise('B', None), [b"tt"])
+    tc.assertEqual(p9.serialise('B', None), [b""])
     tc.assertEqual(p19.serialise('AW', {(17, 1), (18, 0)}), [b"aa", b"bb"])
     tc.assertEqual(p9.serialise('DD', [(1, 2), (3, 4)]), [b"ch", b"ef"])
     tc.assertEqual(p9.serialise('DD', []), [b""])
