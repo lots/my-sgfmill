@@ -73,7 +73,9 @@ def prepare_dir():
 
     """
     os.rename("README.sdist.txt", "README.txt")
-    os.remove("README.rst")
+    # The distribution README is README.txt (from README.sdist.txt); the
+    # repository README describes the fork and is not shipped.
+    os.remove("README.md")
 
 def get_version():
     """Obtain the sgfmill version from setup.py."""
