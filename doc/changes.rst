@@ -1,6 +1,20 @@
 Changes
 =======
 
+* Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
+  non-standard properties in an |sgf| game and can remove them to produce a
+  file that only uses standard properties.
+
+* Added the :mod:`~sgfmill.sgf_transform` module, which flips or turns the
+  board of an |sgf| game: vertical flip, horizontal flip, and quarter-turns
+  clockwise and anti-clockwise.
+
+* Added the :mod:`~sgfmill.sgf_encoding` module, which works out the character
+  encoding of |sgf| data and converts it to UTF-8.
+
+* Added the :script:`report_sgf_properties.py`, :script:`transform_sgf.py` and
+  :script:`convert_sgf_encoding.py` example scripts.
+
 * A pass is now written as the FF[4] empty value (``B[]``) rather than as
   ``tt``, on boards of every size. The older ``tt`` encoding is still accepted
   when reading a board of 19x19 or smaller.

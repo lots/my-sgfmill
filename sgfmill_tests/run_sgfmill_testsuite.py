@@ -12,6 +12,9 @@ test_modules = [
     'sgf_properties_tests',
     'sgf_tests',
     'sgf_moves_tests',
+    'sgf_normalise_tests',
+    'sgf_transform_tests',
+    'sgf_encoding_tests',
     ]
 
 def get_test_module(name):

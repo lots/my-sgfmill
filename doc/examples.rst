@@ -51,8 +51,9 @@ Modifying a game
   b'(;FF[4]CA[UTF-8]GM[1]RE[B+R]SZ[9];B[ee];W[ge];B[dg])\n'
 
 
-See also the :script:`show_sgf.py` and :script:`split_sgf_collection.py`
-example scripts.
+See also the :script:`show_sgf.py`, :script:`split_sgf_collection.py`,
+:script:`report_sgf_properties.py`, :script:`transform_sgf.py` and
+:script:`convert_sgf_encoding.py` example scripts.
 
 
 The example scripts
@@ -83,5 +84,28 @@ scripts.
   Splits a file containing an |sgf| game collection into multiple files.
 
   This demonstrates the parsing functions from the :mod:`!sgf_grammar` module.
+
+
+.. script:: report_sgf_properties.py
+
+  Reports properties in an |sgf| file which aren't defined by FF[4], and can
+  remove them to produce a file that only uses standard properties.
+
+  This demonstrates the :mod:`~sgfmill.sgf_normalise` module.
+
+
+.. script:: transform_sgf.py
+
+  Flips or turns the board of an |sgf| file, saving the result to a new file.
+
+  This demonstrates the :mod:`~sgfmill.sgf_transform` module.
+
+
+.. script:: convert_sgf_encoding.py
+
+  Reports the character encoding used by an |sgf| file, and can rewrite it in
+  UTF-8.
+
+  This demonstrates the :mod:`~sgfmill.sgf_encoding` module.
 
 

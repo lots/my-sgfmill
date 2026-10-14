@@ -20,6 +20,9 @@ The package module itself defines only a single constant:
 
    sgf
    sgf_moves
+   sgf_normalise
+   sgf_transform
+   sgf_encoding
    sgf_board_interface
    boards
    ascii_boards
@@ -39,6 +42,9 @@ The package includes the following modules:
 ========================================= ========================================================================
 :mod:`~sgfmill.sgf`                        High level |sgf| interface.
 :mod:`~sgfmill.sgf_moves`                  Higher-level processing of moves and positions from |sgf| games.
+:mod:`~sgfmill.sgf_normalise`              Reporting and removing non-standard |sgf| properties.
+:mod:`~sgfmill.sgf_transform`              Flipping and turning an |sgf| game's board.
+:mod:`~sgfmill.sgf_encoding`               Detecting an |sgf| file's encoding, and converting it to UTF-8.
 :mod:`~sgfmill.sgf_board_interface`        Go-board interface required by :mod:`!sgf_moves`.
 :mod:`~!sgfmill.sgf_grammar`               The |sgf| parser.
 :mod:`~!sgfmill.sgf_properties`            Interpreting |sgf| property values.
@@ -60,6 +66,12 @@ processing moves and positions.
 The :mod:`~sgfmill.sgf_board_interface` module defines an abstract board
 interface required by functions in :mod:`!sgf_moves` (and implemented by
 :class:`boards.Board`).
+
+The :mod:`~sgfmill.sgf_normalise`, :mod:`~sgfmill.sgf_transform` and
+:mod:`~sgfmill.sgf_encoding` modules are for working on |sgf| files as files:
+finding properties which aren't standard, turning or flipping the board, and
+converting the character encoding to UTF-8. They are the sort of thing a
+viewer or editor needs when loading or saving a record.
 
 The :mod:`!sgf_grammar` and :mod:`!sgf_properties` modules are
 used to implement the :mod:`!sgf` module, and are not currently documented.
