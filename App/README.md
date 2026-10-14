@@ -54,47 +54,43 @@ python App/run_sgf_toolkit.py
 
 ## The layout
 
-The window follows the order you work in: **select a target**, **choose an
-action**, **see the result**. The help pane along the bottom describes whatever
-action is highlighted.
+Two rows. The top row is three panels side by side; the bottom row is a single
+message pane. The panels follow the order you work in: **select a target**,
+**choose an action**, **see the result**.
 
 ```
-┌─ header ───────────────────────────────────────────────────────────────┐
-│ 1  SELECT TARGET          │ 2  SELECT ACTION                            │
-│  examples                 │   Show board position                       │
-│ 📂 examples               │   Show game information                     │
-│  ├── 9x9-wg-01.sgf        │   List properties in the tree               │
-│  ├── 9x9-wg-05.sgf        │   ...                                       │
-│  └── ff4_ex.sgf           │ ───────────────────────────────────────────  │
-│                           │  468 bytes   9x9   1 game   UTF-8           │
-│                           │  sample.sgf  Output file                    │
-│                           │  [ C:\...\sample-clean.sgf    ]  [ Run ]    │
-│                           │ ┌ Board │ Info │ Moves │ Notes ┐            │
-│                           │ │      (result of the action)   │           │
-│                           │ └───────────────────────────────┘           │
-├───────────────────────────┴─────────────────────────────────────────────┤
-│ Report properties that FF[4] does not define for Go: the private         │
-│ properties other programs add, which make a file less portable.          │
-│ Result: the Info tab. Nothing is changed.                                │
-└─ footer ───────────────────────────────────────────────────────────────┘
+┌─ header ──────────────────────────────────────────────────────────────────┐
+│ 1  SELECT TARGET        │ 2  SELECT ACTION        │ 468 bytes  9x9  1 game │
+│  examples               │  Show board position    │ Board Info Moves Notes │
+│ 📂 examples             │  Show game information  │ 9x9-wg-05.sgf   final  │
+│  ├── 9x9-wg-01.sgf      │  List properties...     │                        │
+│  ├── 9x9-wg-05.sgf      │  List moves             │ 9  .  .  o  .  #  .  . │
+│  └── ff4_ex.sgf         │  Check for non-standard │ 8  .  o  .  o  o  #  # │
+│                         │  ...                    │ 7  .  o  o  #  #  .  . │
+│                         │                         │ ...                    │
+│                         │ 9x9-wg-05.sgf           │                        │
+│                         │ [ ....-clean.sgf   ]    │                        │
+│                         │ [      Run         ]    │                        │
+├─────────────────────────┴─────────────────────────┴────────────────────────┤
+│ 9x9-wg-05.sgf  Report properties FF[4] does not define for Go.  Info tab.  │
+└─ footer ───────────────────────────────────────────────────────────────────┘
 ```
+
+The three panels each take the full height of the top row; nothing is stacked.
 
 * **1 — Explorer** (left) — a VS Code style tree rooted at the chosen
   directory: directories, plus `.sgf` files only, so hidden directories
   (`.git`, `__pycache__`) stay out of the way. Selecting a file opens it and
   makes it the target.
-* **2 — Actions** (right, top) — the list of actions. Select one to run it, or
-  press `Ctrl+J`.
-* **3 — Parameter row and results** (right, below the actions) — a bar
-  describing the target (size, board, games, encoding), then a row showing
-  which file the action applies to with the parameter box and **Run** button,
-  then a tab per kind of output: the board diagram, information and tables, the
-  move list, and a running log of what the app has done.
-* **Help** (bottom, full width) — what the highlighted action does, what its
-  parameter means, and what you get. Press `h` to hide or show it.
-
-The parameter row is deliberately next to the results rather than in the
-sidebar, so that the action list stays usable in a short terminal.
+* **2 — Actions** (middle) — the list of actions, with the parameter box and
+  **Run** button below it. Select an action to run it, or press `Ctrl+J`.
+* **3 — Results** (right) — a line describing the target (size, board, games,
+  encoding), then a tab per kind of output: the board diagram, information and
+  tables, the move list, and a running log of what the app has done.
+* **Message pane** (bottom, full width) — one line about the highlighted
+  action: what it does, what its parameter means, and what you get. It names
+  the target too, so there is no doubt what **Run** will act on. Press `h` to
+  hide or show it.
 
 ## Keys
 
@@ -104,7 +100,7 @@ sidebar, so that the action list stays usable in a short terminal.
 | `Enter` | In the parameter box: run the action |
 | `e` | Focus the explorer (step 1) |
 | `a` | Focus the actions list (step 2) |
-| `h` | Hide or show the help pane |
+| `h` | Hide or show the message pane |
 | `r` | Reload the target from disk |
 | `s` | Save (write the game back to its file) |
 | `d` | Open a directory (type it in the parameter box first) |
@@ -163,11 +159,11 @@ App/
 ```
 
 `sgf_toolkit.py` is in three parts: `SgfFileExplorer` (the filtered directory
-tree), `OperationHelp` (the help text for each action), and the
+tree), `MessageBar` (the message text for each action), and the
 `SgfToolkitApp` class (layout, actions, bindings). Each action is a method named
 `op_<identifier>` and is listed in `SgfToolkitApp.OPERATIONS`; adding one means
 appending to that list, writing the method, and adding an entry to
-`OperationHelp.HELP` (a test checks that every action has help).
+`MessageBar.HELP` (a test checks that every action has a message).
 
 ## Tests
 
@@ -179,8 +175,9 @@ The app is covered by three test modules:
   failing action is reported rather than ignored.
 * `sgfmill_tests/app_layout_tests.py` covers the shape of the window: that the
   explorer and the action list are on the left with the results beside them and
-  help across the bottom, that the help pane describes the highlighted action,
-  and that writing to a name that already exists picks a free name instead.
+  the message pane across the bottom, that it describes the highlighted
+action and names the target, and that writing to a name that already exists
+picks a free name instead.
 * `sgfmill_tests/app_entry_tests.py` runs the entry script for real, in a
   subprocess, from the repository root and from another directory. It guards
   the `sys.path` bootstrap described above, which is easy to break and was

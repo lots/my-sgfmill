@@ -11,9 +11,9 @@ Changes
   repository root. Two environment variables (``SGF_TOOLKIT_HEADLESS`` and
   ``SGF_TOOLKIT_EXIT_AFTER_STARTUP``) let it start where there is no terminal.
 
-  The window is arranged in the order you work in -- select a target (the file
-  explorer, on the left), choose an action, then read the result -- with a help
-  pane across the bottom describing the highlighted action.
+  The window is two rows: three panels side by side on the top row (select a
+  target in the file explorer, choose an action, see the result), and a single
+  message pane across the bottom describing the highlighted action.
 
 * Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
   non-standard properties in an |sgf| game and can remove them to produce a

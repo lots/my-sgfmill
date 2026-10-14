@@ -1,19 +1,23 @@
 """Tests for the SGF Toolkit layout and its three-step flow.
 
-These cover things app_tests.py does not: where the panes are, that the help
-pane describes the highlighted action, and that writing to an existing name
-does not overwrite it.
+The window is two rows: three panels side by side on the top row (target,
+actions, result) and a single message pane across the bottom. These tests cover
+that arrangement, the message text, and that writing to an existing name does
+not overwrite it.
 """
 
 import asyncio
 import contextlib
+import io
 import shutil
 import uuid
 from pathlib import Path
 
+from rich.console import Console
+
 from . import sgfmill_test_support
 
-from App.sgf_toolkit import OperationHelp, SgfToolkitApp
+from App.sgf_toolkit import MessageBar, SgfToolkitApp
 
 from sgfmill import sgf
 
@@ -51,119 +55,121 @@ def _write_sample(directory, name="sample.sgf", with_junk=False):
 
 
 def _text_of(app, selector):
-    """The visible text of a Static-like widget, as a string."""
-    import io
-    from rich.console import Console
+    """The text of a Static-like widget, as a string."""
     content = app.query_one(selector).content
     if isinstance(content, str):
         return content
-    console = Console(file=io.StringIO(), width=110, no_color=True,
+    console = Console(file=io.StringIO(), width=200, no_color=True,
                       legacy_windows=False)
     console.print(content)
     return console.file.getvalue()
 
 
-def test_layout_order(tc):
-    """The three steps read left to right and top to bottom, with help below.
+def _visible_text(app, selector):
+    """What the widget shows on screen, with line wrapping applied."""
+    console = Console(file=io.StringIO(), width=400, no_color=True,
+                      legacy_windows=False)
+    console.print(app.query_one(selector).render())
+    return console.file.getvalue().replace("\n", " ")
 
-    Step 1 (the explorer) is on the left, step 2 (the actions) is beside it and
-    above its results, and the help pane spans the bottom of the window.
-    """
+
+def test_two_rows_only(tc):
+    """Three panels across the top row, and one message pane below them."""
     with scratch_dir() as tmp:
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
                 explorer = app.query_one("#explorer").region
                 actions = app.query_one("#operations-pane").region
                 results = app.query_one("#results").region
-                help_pane = app.query_one("#help").region
+                message = app.query_one("#message-bar").region
 
-                # Step 1 is on the left, and nothing else is to its left.
+                # The three panels are side by side: same row, increasing x.
+                tc.assertEqual(explorer.y, actions.y)
+                tc.assertEqual(actions.y, results.y)
+                tc.assertLess(explorer.x, actions.x)
+                tc.assertLess(actions.x, results.x)
+                # ...and they have the same height, filling the row.
+                tc.assertEqual(explorer.height, actions.height)
+                tc.assertEqual(actions.height, results.height)
+                # ...they start at the left edge and are not stacked.
                 tc.assertEqual(explorer.x, 0)
-                # Step 2 is to the right of step 1, sharing the result column.
                 tc.assertEqual(actions.x, explorer.width)
-                # Step 3 is below step 2, in the same column.
-                tc.assertEqual(results.x, actions.x)
-                tc.assertLess(actions.y, results.y)
-                # Help spans the bottom, below everything else.
-                tc.assertEqual(help_pane.x, 0)
-                tc.assertGreater(help_pane.y, explorer.y)
-                tc.assertGreater(help_pane.y, results.y)
-                tc.assertGreater(help_pane.width, explorer.width)
+                # The message pane is its own row, below all three.
+                tc.assertEqual(message.x, 0)
+                tc.assertGreater(message.y, explorer.y)
+                tc.assertGreater(message.y, actions.y)
+                tc.assertGreater(message.y, results.y)
+                tc.assertGreater(message.width, results.width - 1)
         _run(scenario())
 
-def test_help_describes_each_action(tc):
-    """Highlighting an action should describe it in the help pane."""
+def test_message_bar_describes_each_action(tc):
+    """The message pane should describe the highlighted action."""
     with scratch_dir() as tmp:
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
-                help_pane = app.query_one(OperationHelp)
-                # Every action has help text.
+                # Every action has a message.
                 for identifier, _label, _prompt, _default in app.OPERATIONS:
-                    tc.assertIn(identifier, OperationHelp.HELP,
-                                "no help for %s" % identifier)
-                # The pane shows the help for the selected action.
+                    tc.assertIn(identifier, MessageBar.HELP,
+                                "no message for %s" % identifier)
                 app._set_action(0)
                 await pilot.pause()
-                first = _text_of(app, "#help")
+                first = _visible_text(app, "#message-bar")
                 tc.assertIn("ASCII board", first)
-                # ...and changes when another action is selected.
+                # ...and it changes when another action is selected.
                 index = [o[0] for o in app.OPERATIONS].index("check")
                 app._set_action(index)
                 await pilot.pause()
-                second = _text_of(app, "#help")
+                second = _visible_text(app, "#message-bar")
                 tc.assertNotEqual(first, second)
                 tc.assertIn("FF[4]", second)
-                # An action with a parameter says so, and what it gets.
-                index = [o[0] for o in app.OPERATIONS].index("clean")
-                app._set_action(index)
-                await pilot.pause()
-                third = _text_of(app, "#help")
-                tc.assertIn("Output file", third)
         _run(scenario())
 
-def test_help_mentions_the_parameter(tc):
-    """Help for an action with a parameter should say what the box is for.
-
-    The help is prose rather than the label verbatim, so this checks that the
-    kind of thing being asked for appears in it.
-    """
+def test_message_bar_mentions_the_parameter_and_target(tc):
+    """The message should say which file the action applies to, and what the
+    parameter box is for."""
     with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
                 await pilot.pause()
                 for identifier, _label, prompt, _default in app.OPERATIONS:
-                    if prompt is None:
-                        continue
-                    # 'Move number (blank = final)' -> 'Move number'
-                    keyword = prompt.split("(")[0].strip()
                     index = [o[0] for o in app.OPERATIONS].index(identifier)
                     app._set_action(index)
                     await pilot.pause()
-                    shown = _text_of(app, "#help")
-                    tc.assertIn(keyword, shown,
-                                "help for %s omits its parameter" % identifier)
+                    shown = _visible_text(app, "#message-bar")
+                    tc.assertIn("sample.sgf", shown,
+                                "message for %s omits the target" % identifier)
+                    if prompt is not None:
+                        # 'Move number (blank = final)' -> 'Move number'
+                        keyword = prompt.split("(")[0].strip()
+                        tc.assertIn(keyword, shown,
+                                    "message for %s omits its parameter"
+                                    % identifier)
         _run(scenario())
 
-def test_help_can_be_toggled(tc):
-    """'h' should hide and show the help pane."""
+def test_message_bar_can_be_toggled(tc):
+    """'h' should hide and show the message pane."""
     with scratch_dir() as tmp:
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
-                help_pane = app.query_one(OperationHelp)
-                tc.assertTrue(help_pane.display)
+                bar = app.query_one(MessageBar)
+                tc.assertTrue(bar.display)
                 await pilot.press("h")
                 await pilot.pause()
-                tc.assertFalse(help_pane.display)
+                tc.assertFalse(bar.display)
                 await pilot.press("h")
                 await pilot.pause()
-                tc.assertTrue(help_pane.display)
+                tc.assertTrue(bar.display)
         _run(scenario())
 
 def test_output_name_is_not_overwritten(tc):
@@ -175,7 +181,7 @@ def test_output_name_is_not_overwritten(tc):
 
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
@@ -197,13 +203,13 @@ def test_output_name_is_not_overwritten(tc):
         tc.assertFalse(cleaned.get_root().has_property("MULTIGOGM"))
 
 def test_dash_writes_back_to_the_target(tc):
-    """'-' means the open file, as the help pane says for Save."""
+    """'-' means the open file, as the message pane says for Save."""
     with scratch_dir() as tmp:
         path = _write_sample(tmp)
 
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
@@ -214,30 +220,21 @@ def test_dash_writes_back_to_the_target(tc):
                 await pilot.pause()
         _run(scenario())
 
-        # The target itself was rewritten (here it was already clean).
         tc.assertTrue(sgf.Sgf_game.from_bytes(path.read_bytes()).get_size() == 9)
 
-def test_target_is_shown_before_the_action(tc):
-    """The parameter row should name the target, so step 2 is unambiguous.
-
-    The target's own details (size, board, games, encoding) are in the bar
-    above it.
-    """
+def test_target_details_bar(tc):
+    """The results panel should describe the target it is showing."""
     with scratch_dir() as tmp:
         path = _write_sample(tmp)
 
         async def scenario():
             app = SgfToolkitApp(tmp)
-            async with app.run_test(size=(120, 40)) as pilot:
+            async with app.run_test(size=(140, 40)) as pilot:
                 await pilot.pause()
-                tc.assertIn("none selected", _text_of(app, "#target-bar"))
+                tc.assertIn("no target selected", _text_of(app, "#target-bar"))
                 app.load_file(path)
                 await pilot.pause()
-                # The details bar describes the file...
                 bar = _text_of(app, "#target-bar")
                 tc.assertIn("9x9", bar)
                 tc.assertIn("1 game", bar)
-                # ...and the parameter row says which file the action applies to.
-                row = _text_of(app, "#param-label")
-                tc.assertIn("sample.sgf", row)
         _run(scenario())
