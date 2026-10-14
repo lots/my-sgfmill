@@ -20,6 +20,10 @@ Changes
   then saves that result. The file that was opened is never transformed in
   place.
 
+  The board caption counts stones as well as moves, so that a position reached
+  with passes, captures or setup stones cannot look as though a move went
+  missing.
+
 * Added the :mod:`~sgfmill.sgf_normalise` module, which reports the
   non-standard properties in an |sgf| game and can remove them to produce a
   file that only uses standard properties.

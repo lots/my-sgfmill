@@ -629,7 +629,7 @@ class SgfToolkitApp(App):
                            style="bold yellow")
             caption.append("   (Run saves it)", style="dim")
         elif move_number is None:
-            caption.append("   final position, %d moves" % len(plays))
+            caption.append("   " + self._position_summary(plays))
         else:
             caption.append("   before move %d" % move_number)
         self._set_view("board-view",
@@ -639,6 +639,28 @@ class SgfToolkitApp(App):
             self._show("tab-board")
             self._note("Previewing the board %s (not saved yet)"
                        % self.BOARD_TRANSFORMS_BY_VALUE[transform])
+
+    def _position_summary(self, plays):
+        """Describe a position in terms of the moves that produced it.
+
+        Moves and stones are only the same number when nothing was captured and
+        nobody passed, so say what is on the board and why, rather than leaving
+        a count of moves next to a different number of stones.
+        """
+        passes = sum(1 for _colour, move in plays if move is None)
+        played = len(plays) - passes
+        black_setup, white_setup, _empty = self.game.get_root().get_setup_stones()
+        stones = len(black_setup) + len(white_setup)
+        parts = ["%d move%s" % (len(plays), "" if len(plays) == 1 else "s")]
+        if passes:
+            parts.append("%d pass%s" % (passes, "" if passes == 1 else "es"))
+        if played:
+            parts.append("%d stone%s by the moves"
+                         % (played, "" if played == 1 else "s"))
+        if stones:
+            parts.append("%d setup stone%s"
+                         % (stones, "" if stones == 1 else "s"))
+        return "final position: " + ", ".join(parts)
 
     # 2 -- game information
     def op_info(self):

@@ -19,6 +19,7 @@ from . import sgfmill_test_support
 
 from App.sgf_toolkit import MessageBar, SgfToolkitApp
 
+from sgfmill import ascii_boards
 from sgfmill import sgf
 
 
@@ -273,6 +274,93 @@ def test_run_saves_the_transformed_board(tc):
 def _plays(game):
     from sgfmill import sgf_moves
     return sgf_moves.get_setup_and_moves(game)
+
+
+def _reference_board(data):
+    """The board the library produces for some SGF data."""
+    from sgfmill import sgf_moves
+    game = sgf.Sgf_game.from_bytes(data)
+    board, plays = sgf_moves.get_setup_and_moves(game)
+    for colour, move in plays:
+        if move is not None:
+            board.play(move[0], move[1], colour)
+    return board
+
+
+def test_board_matches_the_library(tc):
+    """The board view must equal the position the library computes.
+
+    A correctness check rather than a layout one: the stones drawn must be
+    exactly what applying the file's moves gives, including for positions where
+    the number of moves and the number of stones differ.
+    """
+    cases = {
+        "plain.sgf": b"(;FF[4]GM[1]SZ[9];B[cg];W[gc];B[gg];W[cc])",
+        # A pass places no stone, so four moves leave three stones.
+        "pass.sgf": b"(;FF[4]GM[1]SZ[9];B[cg];W[];B[gg];W[cc])",
+        # A capture removes a stone.
+        "capture.sgf": b"(;FF[4]GM[1]SZ[9];W[ee];B[de];B[fe];B[ed];B[ef])",
+        # Setup stones are on the board before any move.
+        "setup.sgf": b"(;FF[4]GM[1]SZ[9]AB[aa][bb];B[cg];W[gc])",
+        # A pass and a capture together.
+        "both.sgf": (b"(;FF[4]GM[1]SZ[9]AB[dd];W[ee];B[de];B[fe];B[ed];"
+                     b"B[ef];W[];B[cc])"),
+    }
+    with scratch_dir() as tmp:
+        paths = {}
+        for name, data in cases.items():
+            path = Path(tmp) / name
+            path.write_bytes(data)
+            paths[name] = path
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                for name, path in sorted(paths.items()):
+                    app.load_file(path)
+                    await pilot.pause()
+                    shown = _text_of(app, "#board-view")
+                    diagram = ascii_boards.render_board(
+                        _reference_board(path.read_bytes()))
+                    tc.assertIn(diagram, shown,
+                                "%s: board view does not match the library"
+                                % name)
+        _run(scenario())
+
+def test_position_summary_explains_the_counts(tc):
+    """The caption must not claim more stones than there are.
+
+    "4 moves" beside three stones looks like a bug, so the caption says how
+    many stones the moves produced, and mentions passes and setup stones.
+    """
+    with scratch_dir() as tmp:
+        cases = {
+            "plain.sgf": (b"(;FF[4]GM[1]SZ[9];B[cg];W[gc];B[gg];W[cc])",
+                          ["4 moves", "4 stones"]),
+            "pass.sgf": (b"(;FF[4]GM[1]SZ[9];B[cg];W[];B[gg];W[cc])",
+                         ["4 moves", "1 pass", "3 stones"]),
+            "setup.sgf": (b"(;FF[4]GM[1]SZ[9]AB[aa][bb];B[cg];W[gc])",
+                          ["2 moves", "2 stones", "2 setup stones"]),
+        }
+        paths = {}
+        for name, (data, _expected) in cases.items():
+            path = Path(tmp) / name
+            path.write_bytes(data)
+            paths[name] = path
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                for name, path in sorted(paths.items()):
+                    app.load_file(path)
+                    await pilot.pause()
+                    caption = _text_of(app, "#board-view").splitlines()[0]
+                    for fragment in cases[name][1]:
+                        tc.assertIn(fragment, caption,
+                                    "%s: caption was %r" % (name, caption))
+        _run(scenario())
 
 
 def test_output_name_is_not_overwritten(tc):

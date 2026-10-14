@@ -144,6 +144,12 @@ Arrow keys and Enter drive the operations list and the file tree.
   the action refuses and says so (use **Save** for that). Selecting any other
   action puts the plain final position back, so a preview can't be mistaken for
   the file's contents.
+* **Moves and stones are not the same count.** A pass places nothing, a
+  capture removes something, and setup stones (`AB`/`AW`) are on the board
+  before any move. So four moves need not mean four stones, and the board
+  caption says which is which — for example `final position: 4 moves, 1 pass,
+  3 stones by the moves`. The diagram itself is always the position the library
+  computes for the file.
 * **Collections.** An `.sgf` file may hold several games. Everything except
   *Split* works on the first game, and the target bar says so. *Split* writes
   one file per game.
