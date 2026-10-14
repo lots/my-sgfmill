@@ -254,9 +254,11 @@ class SgfToolkitApp(App):
 
     BINDINGS = [
         Binding("ctrl+j", "run", "Run action"),
+        Binding("ctrl+a", "apply_again", "Apply again"),
+        Binding("escape", "reset_preview", "Reset preview"),
         Binding("e", "focus_explorer", "Explorer"),
         Binding("a", "focus_operations", "Actions"),
-        Binding("h", "toggle_help", "Help"),
+        Binding("h", "toggle_help", "Message"),
         Binding("r", "reload", "Reload"),
         Binding("s", "save", "Save"),
         Binding("d", "go_to_directory", "Open dir"),
@@ -308,6 +310,11 @@ class SgfToolkitApp(App):
         self.game = None
         self.game_count = 0
         self.current = self.OPERATIONS[0]
+        # Board transformations applied to the preview so far. Each one is
+        # cumulative, so selecting a flip twice returns to the original board
+        # and a quarter-turn four times does too. Cleared when anything else is
+        # selected, and when the preview is saved.
+        self.pending_transforms = []
 
     # -- layout ------------------------------------------------------------
 
@@ -326,6 +333,7 @@ class SgfToolkitApp(App):
                     yield Static("", id="param-label")
                     yield Input(placeholder="", id="param-input")
                     yield Button("Run", variant="primary", id="run")
+                    yield Button("Apply one more", id="apply-again")
             with Vertical(id="results"):
                 yield Static("", id="target-bar")
                 with TabbedContent(initial="tab-board"):
@@ -429,18 +437,53 @@ class SgfToolkitApp(App):
     def _update_preview(self, identifier):
         """Draw the board that the selected action is about.
 
-        The point of a flip or a turn is what the board becomes, so the result
-        is shown as soon as the action is selected, and 'Run' then only has to
-        save it. Selecting anything else puts the plain final position back, so
-        a stale preview can't be mistaken for the file's contents.
+        Selecting a flip or a turn adds one application of it to whatever is
+        already pending, so the transformations compose: selecting a flip twice
+        brings the board back to where it started, and a quarter-turn four
+        times does too. 'Run' then saves the net result.
+
+        Selecting anything else clears the pending transformations and puts the
+        plain final position back, so a stale preview can't be mistaken for the
+        file's contents.
         """
         if self.game is None:
             return
+        # Starting a different action starts from the file's board again, so
+        # pending transformations belong to one action only.
+        if identifier != getattr(self, "_preview_action", None):
+            self.pending_transforms = []
+            self._preview_action = identifier
         if identifier in self.BOARD_TRANSFORMS:
             transformation, _words = self.BOARD_TRANSFORMS[identifier]
-            self._show_board(transform=transformation)
+            self.pending_transforms.append(transformation)
+            self._show_board(transforms=list(self.pending_transforms))
         else:
+            self.pending_transforms = []
             self._show_board()
+
+    def apply_transform_again(self):
+        """Add one more application of the current transformation.
+
+        This is how the cycle is demonstrated: apply a flip twice and the board
+        is back to the original, apply a clockwise turn four times and the same
+        happens.
+        """
+        identifier = self.current[0]
+        if identifier not in self.BOARD_TRANSFORMS or self.game is None:
+            self.notify("Select a flip or turn action first.",
+                        title="Nothing to apply", severity="warning")
+            return
+        transformation, _words = self.BOARD_TRANSFORMS[identifier]
+        self.pending_transforms.append(transformation)
+        self._show_board(transforms=list(self.pending_transforms))
+
+    def clear_pending_transforms(self):
+        """Throw away any pending transformations, back to the file's board."""
+        if not self.pending_transforms:
+            return
+        self.pending_transforms = []
+        self._show_board()
+        self.notify("Preview reset to the file's position.")
 
     def _update_target_bar(self):
         """Describe the target, on one line above the result tabs."""
@@ -548,6 +591,16 @@ class SgfToolkitApp(App):
     def _run_pressed(self):
         self.run_current_operation()
 
+    @on(Button.Pressed, "#apply-again")
+    def _apply_again_pressed(self):
+        self.apply_transform_again()
+
+    def action_apply_again(self):
+        self.apply_transform_again()
+
+    def action_reset_preview(self):
+        self.clear_pending_transforms()
+
     @on(Input.Submitted, "#param-input")
     def _param_submitted(self):
         self.run_current_operation()
@@ -596,16 +649,17 @@ class SgfToolkitApp(App):
         self._show_board(move_number)
         self._show("tab-board")
 
-    def _show_board(self, move_number=None, transform=None):
-        """Draw a position, optionally after a board transformation.
+    def _show_board(self, move_number=None, transforms=None):
+        """Draw a position, optionally after some board transformations.
 
-        'transform' is one of the sgf_transform constants; it is applied to a
-        copy of the game, so the target itself is not changed.
+        'transforms' is a sequence of sgf_transform constants, applied in
+        order to a copy of the game, so the target itself is not changed.
         """
         game = self.game
-        if transform is not None:
+        if transforms:
             game = self._reparse()
-            sgf_transform.transform_game(game, transform)
+            for transformation in transforms:
+                sgf_transform.transform_game(game, transformation)
         try:
             board, plays = sgf_moves.get_setup_and_moves(game)
         except ValueError as e:
@@ -623,11 +677,11 @@ class SgfToolkitApp(App):
                 break
         caption = Text()
         caption.append(self.path.name, style="bold")
-        if transform is not None:
-            caption.append("   PREVIEW: %s"
-                           % self.BOARD_TRANSFORMS_BY_VALUE[transform],
+        if transforms:
+            caption.append("   PREVIEW: %s" % self._transform_words(transforms),
                            style="bold yellow")
-            caption.append("   (Run saves it)", style="dim")
+            caption.append("   (%d applied, Run saves it)" % len(transforms),
+                           style="dim")
         elif move_number is None:
             caption.append("   " + self._position_summary(plays))
         else:
@@ -635,10 +689,22 @@ class SgfToolkitApp(App):
         self._set_view("board-view",
                        Text.assemble(caption, "\n\n",
                                      Text(ascii_boards.render_board(board))))
-        if transform is not None:
+        if transforms:
             self._show("tab-board")
-            self._note("Previewing the board %s (not saved yet)"
-                       % self.BOARD_TRANSFORMS_BY_VALUE[transform])
+
+    def _transform_words(self, transforms):
+        """Describe a run of transformations, collapsing repeats.
+
+        Two flips in a row cancel out, and four turns make a full circle, so
+        the count is what matters: say "3 x clockwise turn" rather than listing
+        it three times.
+        """
+        words = [self.BOARD_TRANSFORMS_BY_VALUE[t] for t in transforms]
+        if len(words) == 1:
+            return words[0]
+        if len(set(words)) == 1:
+            return "%d x %s" % (len(words), words[0])
+        return " then ".join(words)
 
     def _position_summary(self, plays):
         """Describe a position in terms of the moves that produced it.
@@ -845,9 +911,11 @@ class SgfToolkitApp(App):
         self._note("%s -> %s (UTF-8)" % (self.path.name, target.name),
                    style="green")
 
-    # 9-12 -- transforms. Selecting one previews the result on the Board tab;
-    # running it saves that result (Run does not re-preview, and refuses to
-    # write over the target, so the file you opened is never turned in place).
+    # 9-12 -- transforms. Selecting one adds an application of it to the
+    # preview on the Board tab; 'Add one' composes another; Run saves the net
+    # result. Because they compose, applying a flip twice (or a quarter-turn
+    # four times) brings the board back to where it started, and Run then has
+    # nothing to change.
     def op_rotate_cw(self):
         self._transform("rotate_cw")
 
@@ -863,7 +931,17 @@ class SgfToolkitApp(App):
     def _transform(self, identifier):
         if not self._require_file():
             return
-        transformation, description = self.BOARD_TRANSFORMS[identifier]
+        # Saving follows the preview: with nothing pending there is no
+        # transformation to save, and quietly writing an unchanged copy would
+        # look like a mistake, so say so instead.
+        if not self.pending_transforms:
+            self.notify("Select this action (or press Apply one more) to see "
+                        "the transformed board first; the file is written only "
+                        "once there is something to save.",
+                        title="Nothing to apply", severity="warning")
+            self._note("Nothing pending: select %s to preview it first"
+                       % identifier, style="yellow")
+            return
         target = self._output_path()
         if target is None:
             return
@@ -871,16 +949,47 @@ class SgfToolkitApp(App):
             self.notify("That would overwrite the file you opened. Give a "
                         "different output name, or use Save.",
                         title="Not written", severity="error")
-            self._note("Refused to %s over the target file" % description,
+            self._note("Refused to transform the target file in place",
                        style="bold red")
             return
+        # Save exactly what the preview is showing. The preview holds the
+        # pending transformations and nothing else, so this stays in step with
+        # what is on screen instead of re-deriving the transformation.
+        transforms = list(self.pending_transforms)
         # Transforms modify a game in place, so work on a fresh parse and leave
         # the loaded game alone until the user saves.
         game = self._reparse()
-        sgf_transform.transform_game(game, transformation)
+        for transformation in transforms:
+            sgf_transform.transform_game(game, transformation)
         self._write(target, game.serialise())
-        self._note("%s: %s -> %s" % (self.path.name, description, target.name),
-                   style="green")
+        description = self._transform_words(transforms)
+        if self._is_identity(transforms):
+            self._note("%s: %s -> %s (a full cycle: the board is unchanged)"
+                       % (self.path.name, description, target.name),
+                       style="yellow")
+        else:
+            self._note("%s: %s -> %s" % (self.path.name, description,
+                                         target.name), style="green")
+        # The preview has been saved, so start again from the file's board.
+        self.pending_transforms = []
+        self._preview_action = None
+        self._show_board()
+
+    @staticmethod
+    def _is_identity(transforms):
+        """Do these transformations leave the board where it started?
+
+        Two flips of the same axis cancel, and four quarter-turns make a full
+        circle. Working it out by applying them to a corner is simpler (and
+        less error-prone) than reasoning about the group.
+        """
+        if not transforms:
+            return True
+        corner = (0, 0)
+        side = 2                      # any square board does, for a corner
+        for transformation in transforms:
+            corner = sgf_transform.transform_point(corner, transformation, side)
+        return corner == (0, 0)
 
     # 13 -- split a collection
     def op_split(self):

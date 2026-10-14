@@ -183,7 +183,12 @@ def test_transform_writes_file(tc):
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
-                app.current = ("rotate_cw", "rotate_cw", "Output file", "")
+                # Select the action, which previews it, then set the output
+                # name and run. (Running with nothing previewed refuses, since
+                # there would be no transformation to save.)
+                app._set_action(
+                    [o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                await pilot.pause()
                 app.query_one("#param-input").value = str(target)
                 app.run_current_operation()
                 await pilot.pause()

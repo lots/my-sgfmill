@@ -276,6 +276,151 @@ def _plays(game):
     return sgf_moves.get_setup_and_moves(game)
 
 
+def _position_of(app):
+    """The board diagram currently shown, without the caption line."""
+    text = _text_of(app, "#board-view")
+    return text.split("\n", 1)[1] if "\n" in text else ""
+
+
+def test_transformations_compose_into_a_cycle(tc):
+    """Applying a flip twice, or a turn four times, returns to the original.
+
+    Transformations accumulate in the preview, so the cycle can be seen closing
+    on screen: two flips cancel, and four quarter-turns come full circle.
+    """
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = {o[0]: i for i, o in enumerate(app.OPERATIONS)}
+                original = _position_of(app)
+
+                for identifier, times in (("flip_v", 2), ("flip_h", 2),
+                                          ("rotate_cw", 4), ("rotate_acw", 4)):
+                    # Selecting the action applies it once...
+                    app._set_action(index[identifier])
+                    await pilot.pause()
+                    tc.assertEqual(len(app.pending_transforms), 1)
+                    tc.assertNotEqual(_position_of(app), original,
+                                      "%s: first application changed nothing"
+                                      % identifier)
+                    # ...and each further application composes with it.
+                    for count in range(2, times + 1):
+                        app.apply_transform_again()
+                        await pilot.pause()
+                        tc.assertEqual(len(app.pending_transforms), count)
+                    # A full cycle is back where we started.
+                    tc.assertEqual(_position_of(app), original,
+                                   "%s applied %d times is not the identity"
+                                   % (identifier, times))
+                    caption = _text_of(app, "#board-view").splitlines()[0]
+                    tc.assertIn("%d x " % times, caption)
+        _run(scenario())
+
+def test_partial_transformations_are_not_the_identity(tc):
+    """One flip, or three turns, must not look like the original board."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = {o[0]: i for i, o in enumerate(app.OPERATIONS)}
+                original = _position_of(app)
+                for identifier, times in (("flip_v", 1), ("flip_h", 1),
+                                          ("rotate_acw", 1)):
+                    app._set_action(index[identifier])
+                    await pilot.pause()
+                    for _ in range(times - 1):
+                        app.apply_transform_again()
+                        await pilot.pause()
+                    tc.assertNotEqual(_position_of(app), original,
+                                      "%s x %d should not be the identity"
+                                      % (identifier, times))
+                # Three quarter-turns are also not the identity.
+                app._set_action(index["rotate_cw"])
+                await pilot.pause()
+                app.apply_transform_again()
+                app.apply_transform_again()
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 3)
+                tc.assertNotEqual(_position_of(app), original,
+                                  "rotate_cw x 3 should not be the identity")
+        _run(scenario())
+
+def test_run_saves_the_composed_result(tc):
+    """Run saves the accumulated transformation, not just the last one."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = {o[0]: i for i, o in enumerate(app.OPERATIONS)}
+
+                # Two clockwise turns = a half turn: (2, 2) becomes (6, 6).
+                app._set_action(index["rotate_cw"])
+                await pilot.pause()
+                app.apply_transform_again()
+                await pilot.pause()
+                target = Path(app.query_one("#param-input").value)
+                app.run_current_operation()
+                await pilot.pause()
+                _, plays = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
+                tc.assertEqual(plays[0], ("b", (6, 6)))
+                # Saving clears the preview, so the next action starts fresh.
+                tc.assertEqual(app.pending_transforms, [])
+
+                # A full cycle saves the original position, and says so. The
+                # first output is removed first, so this save lands on the
+                # suggested name rather than a collision-avoiding one.
+                target.unlink()
+                app._set_action(index["rotate_cw"])
+                await pilot.pause()
+                for _ in range(3):
+                    app.apply_transform_again()
+                    await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 4)
+                target2 = Path(app.query_one("#param-input").value)
+                tc.assertEqual(target2, target)
+                app.run_current_operation()
+                await pilot.pause()
+                _, plays2 = _plays(
+                    sgf.Sgf_game.from_bytes(target2.read_bytes()))
+                tc.assertEqual(plays2[0], ("b", (2, 2)))
+                tc.assertIn("full cycle", _text_of(app, "#notes-view"))
+        _run(scenario())
+
+def test_apply_again_needs_a_transform_action(tc):
+    """Pressing 'apply again' on anything else should change nothing."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                app._set_action([o[0] for o in app.OPERATIONS].index("info"))
+                await pilot.pause()
+                app.apply_transform_again()
+                await pilot.pause()
+                tc.assertEqual(app.pending_transforms, [])
+        _run(scenario())
+
+
 def _reference_board(data):
     """The board the library produces for some SGF data."""
     from sgfmill import sgf_moves

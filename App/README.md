@@ -97,6 +97,8 @@ The three panels each take the full height of the top row; nothing is stacked.
 | Key | Action |
 | --- | --- |
 | `Ctrl+J` | Run the highlighted action |
+| `Ctrl+A` | Apply the current flip/turn one more time |
+| `Escape` | Reset the preview to the file's position |
 | `Enter` | In the parameter box: run the action |
 | `e` | Focus the explorer (step 1) |
 | `a` | Focus the actions list (step 2) |
@@ -135,15 +137,22 @@ Arrow keys and Enter drive the operations list and the file tree.
   open file".
 * **Relative output names** are resolved against the directory of the target
   file, not the app's working directory.
-* **The four flip and turn actions preview themselves.** Selecting *Turn board
-  90 clockwise*, *Turn board 90 anticlockwise*, *Flip board vertically* or
-  *Flip board horizontally* immediately draws the board it would produce, on
-  the Board tab, captioned `PREVIEW: ... (Run saves it)`. Nothing is written
-  until you press **Run**, which then saves that result to the output file. The
-  target is never turned in place: if the output name is the file you opened,
-  the action refuses and says so (use **Save** for that). Selecting any other
-  action puts the plain final position back, so a preview can't be mistaken for
-  the file's contents.
+* **The four flip and turn actions preview themselves, and they compose.**
+  Selecting *Turn board 90 clockwise*, *Turn board 90 anticlockwise*, *Flip
+  board vertically* or *Flip board horizontally* applies it to the preview on
+  the Board tab, captioned `PREVIEW: ... (n applied, Run saves it)`. Selecting
+  the same action again, or pressing **Apply one more** (`Ctrl+A`), adds
+  another application on top, so the cycle can be watched closing: **two flips
+  return to the original board, and four quarter-turns do too**. `Escape`
+  resets the preview. Nothing is written until you press **Run**, which saves
+  the board that is on screen — including a full cycle, which is saved as an
+  unchanged position and noted as such in the log.
+
+  The target is never transformed in place: if the output name is the file you
+  opened, the action refuses and says so (use **Save** for that). Pressing
+  **Run** with nothing previewed also refuses, because there would be nothing to
+  save. Selecting any other action puts the plain final position back, so a
+  preview can't be mistaken for the file's contents.
 * **Moves and stones are not the same count.** A pass places nothing, a
   capture removes something, and setup stones (`AB`/`AW`) are on the board
   before any move. So four moves need not mean four stones, and the board

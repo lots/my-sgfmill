@@ -20,6 +20,11 @@ Changes
   then saves that result. The file that was opened is never transformed in
   place.
 
+  Transformations accumulate, so the cycle can be seen closing: applying a flip
+  twice, or a quarter-turn four times, brings the board back to where it
+  started. Selecting the action again -- or pressing the *Apply one more*
+  button, or ``Ctrl+A`` -- adds another application.
+
   The board caption counts stones as well as moves, so that a position reached
   with passes, captures or setup stones cannot look as though a move went
   missing.
