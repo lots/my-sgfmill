@@ -2,14 +2,19 @@
 
 Run it with::
 
-    python run_sgf_toolkit.py [directory]
+    python App/run_sgf_toolkit.py [directory]
 
-The layout is deliberately like a small editor: the operations and their
-parameters on the left, a tabbed area of results in the middle, and a file
-explorer on the right for choosing the |SGF| file to work on.
+The window is organised around the order you work in:
 
-Each operation is a thin wrapper around one of the library's public functions;
-see OPERATIONS for the mapping.
+    1. Select a target   -- the EXPLORER, on the left
+    2. Choose an action  -- the OPERATIONS list, on the left
+    3. See the result    -- the tabs, in the middle
+
+and a HELP pane along the bottom describes whichever action is highlighted, so
+the list can stay short and you don't have to guess.
+
+Each action is a thin wrapper around one of the library's public functions; see
+OPERATIONS for the mapping.
 """
 
 from __future__ import annotations
@@ -69,73 +74,214 @@ class SgfFileExplorer(DirectoryTree):
         return [path for path in paths if wanted(path)]
 
 
+class OperationHelp(Static):
+    """A one-paragraph description of the highlighted action.
+
+    The text is held here rather than in the app so that the help for an action
+    sits next to nothing else and is easy to keep up to date.
+    """
+
+    #: identifier -> (what it does, what the parameter means, what you get)
+    HELP = {
+        "board": (
+            "Draw the position on an ASCII board.",
+            "Move number: show the position BEFORE that move; leave blank for "
+            "the final position.",
+            "Result: the Board tab.",
+        ),
+        "info": (
+            "Summarise the game: board size, komi, handicap, players, result, "
+            "date, rules, and the detected encoding.",
+            None,
+            "Result: the Info tab.",
+        ),
+        "properties": (
+            "List every node of the game tree, including variations, with the "
+            "properties it sets. Useful for seeing the shape of a file.",
+            None,
+            "Result: the Info tab.",
+        ),
+        "moves": (
+            "List the moves of the leftmost variation, numbered, with passes "
+            "shown as 'pass'.",
+            None,
+            "Result: the Moves tab.",
+        ),
+        "check": (
+            "Report properties that FF[4] does not define for Go: the private "
+            "properties other programs add, which make a file less portable.",
+            None,
+            "Result: the Info tab. Nothing is changed.",
+        ),
+        "clean": (
+            "Remove those non-standard properties and write the cleaned game "
+            "to a new file. The tree structure and every standard property are "
+            "kept.",
+            "Output file: where to write. The open file is not modified.",
+            "Result: a new .sgf file; a summary in the Notes tab.",
+        ),
+        "encoding": (
+            "Report the character encoding the file is really in, and whether "
+            "its CA property agrees.",
+            None,
+            "Result: the Info tab. Nothing is changed.",
+        ),
+        "to_utf8": (
+            "Rewrite the file in UTF-8, re-encoding its comments and player "
+            "names, and set CA[UTF-8].",
+            "Output file: where to write the UTF-8 copy.",
+            "Result: a new .sgf file.",
+        ),
+        "rotate_cw": (
+            "Turn the whole board 90 degrees clockwise: every move, stone and "
+            "markup is moved, comments and other properties are untouched.",
+            "Output file: where to write the turned game.",
+            "Result: a new .sgf file.",
+        ),
+        "rotate_acw": (
+            "Turn the whole board 90 degrees anticlockwise.",
+            "Output file: where to write the turned game.",
+            "Result: a new .sgf file.",
+        ),
+        "flip_v": (
+            "Flip the board about a vertical axis, swapping its left and right "
+            "halves.",
+            "Output file: where to write the flipped game.",
+            "Result: a new .sgf file.",
+        ),
+        "flip_h": (
+            "Flip the board about a horizontal axis, swapping its top and "
+            "bottom halves.",
+            "Output file: where to write the flipped game.",
+            "Result: a new .sgf file.",
+        ),
+        "split": (
+            "Split a file holding several games into one file per game. Only "
+            "useful when the file holds more than one.",
+            "Output directory: created for the split games.",
+            "Result: one .sgf file per game.",
+        ),
+        "save": (
+            "Write the game back to the file it came from. This is the only "
+            "action that modifies the file you opened.",
+            None,
+            "Result: the open file is updated.",
+        ),
+    }
+
+    def update_for(self, identifier):
+        """Show the help for an action."""
+        entry = self.HELP.get(identifier)
+        if entry is None:
+            self.update(Text("No help available for this action.",
+                             style="dim italic"))
+            return
+        summary, parameter, result = entry
+        lines = [Text(summary)]
+        if parameter:
+            lines.append(Text(parameter, style="dim"))
+        if result:
+            lines.append(Text(result, style="dim"))
+        self.update(Group(*lines))
+
+
 class SgfToolkitApp(App):
     """Browse .sgf files and invoke sgfmill's functions on them."""
 
     CSS = """
     #body { height: 1fr; }
 
-    #operations-pane {
-        width: 38;
-        min-width: 30;
+    /* Step 1: the explorer, on the left, as in an editor's side bar. */
+    #explorer {
+        width: 40;
+        min-width: 26;
         border-right: solid $panel-lighten-2;
     }
-    #operations-heading, #explorer-heading, #params-heading {
+    #explorer-heading, #operations-heading {
         background: $panel;
         color: $text;
         padding: 0 1;
         text-style: bold;
     }
-    #operations { height: 1fr; }
-    #params { height: auto; padding: 0 1; }
-    #param-label { color: $text-muted; padding-bottom: 0; }
-    #param-input { margin-bottom: 1; }
-    #file-details { height: auto; padding: 1; }
+    #explorer-tree { height: 1fr; }
+    #explorer-dir {
+        padding: 0 1;
+        height: 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
 
-    #main { width: 1fr; }
+    /* Steps 2 and 3 share the rest of the window. */
+    #actions-and-results { width: 1fr; }
+
+    #operations-pane {
+        height: 15;
+        border-bottom: solid $panel-lighten-2;
+    }
+    #operations { height: 1fr; }
+
+    #results { height: 1fr; }
+    #target-bar {
+        height: auto;
+        padding: 0 1;
+        background: $panel;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    #run-bar { height: 3; padding: 0 1; }
+    #param-label {
+        width: 34;
+        height: 3;
+        content-align: left middle;
+        padding-right: 1;
+        color: $text-muted;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    #param-input { width: 1fr; min-width: 16; }
+    #run { min-width: 10; margin-left: 1; }
     TabbedContent { height: 1fr; }
     #board-view, #info-view, #moves-view, #notes-view { padding: 0 1; }
 
-    /* The explorer is docked to the right, like a side bar. */
-    #explorer {
-        width: 44;
-        min-width: 30;
-        border-left: solid $panel-lighten-2;
+    /* The help pane, across the bottom. */
+    #help {
+        height: 4;
+        border-top: solid $panel-lighten-2;
+        padding: 0 1;
     }
-    #explorer-root-label { padding: 0 1; }
-    #explorer-tree { height: 1fr; }
     """
 
     BINDINGS = [
-        Binding("ctrl+j", "run", "Run operation"),
-        Binding("q", "quit", "Quit"),
-        Binding("r", "reload", "Reload file"),
+        Binding("ctrl+j", "run", "Run action"),
+        Binding("e", "focus_explorer", "Explorer"),
+        Binding("a", "focus_operations", "Actions"),
+        Binding("h", "toggle_help", "Help"),
+        Binding("r", "reload", "Reload"),
         Binding("s", "save", "Save"),
-        Binding("f", "focus_explorer", "Explorer"),
-        Binding("p", "focus_operations", "Operations"),
         Binding("d", "go_to_directory", "Open dir"),
         Binding("ctrl+n", "refresh_explorer", "Refresh files"),
+        Binding("q", "quit", "Quit"),
     ]
 
     TITLE = APP_TITLE
 
-    # (identifier, label, prompt for the parameter input, default value)
-    # A prompt of None means the operation needs no parameter.
+    # (identifier, label, prompt for the parameter, default value)
+    # A prompt of None means the action has no parameter.
     OPERATIONS = [
-        ("board",      "Show board position",          "Move number (blank = final)", ""),
-        ("info",       "Show game information",         None, ""),
-        ("properties", "List properties in the tree",   None, ""),
-        ("moves",      "List moves",                    None, ""),
-        ("check",      "Check for non-standard props",  None, ""),
-        ("encoding",   "Report character encoding",     None, ""),
-        ("clean",      "Clean non-standard -> file",    "Output file", "-clean"),
-        ("to_utf8",    "Convert to UTF-8 -> file",      "Output file", "-utf8"),
-        ("rotate_cw",  "Turn board 90 clockwise",       "Output file", "-rotate_cw"),
-        ("rotate_acw", "Turn board 90 anticlockwise",   "Output file", "-rotate_acw"),
-        ("flip_v",     "Flip board vertically",         "Output file", "-flip_vertical"),
-        ("flip_h",     "Flip board horizontally",       "Output file", "-flip_horizontal"),
+        ("board",      "Show board position",         "Move number (blank = final)", ""),
+        ("info",       "Show game information",        None, ""),
+        ("properties", "List properties in the tree",  None, ""),
+        ("moves",      "List moves",                   None, ""),
+        ("check",      "Check for non-standard props", None, ""),
+        ("clean",      "Clean non-standard -> file",   "Output file", "-clean"),
+        ("to_utf8",    "Convert to UTF-8 -> file",     "Output file", "-utf8"),
+        ("rotate_cw",  "Turn board 90 clockwise",      "Output file", "-rotate_cw"),
+        ("rotate_acw", "Turn board 90 anticlockwise",  "Output file", "-rotate_acw"),
+        ("flip_v",     "Flip board vertically",        "Output file", "-flip_vertical"),
+        ("flip_h",     "Flip board horizontally",      "Output file", "-flip_horizontal"),
         ("split",      "Split collection -> directory", "Output directory", "_files"),
-        ("save",       "Save back to the file",         None, ""),
+        ("save",       "Save back to the file",        None, ""),
     ]
 
     def __init__(self, start_dir):
@@ -146,36 +292,39 @@ class SgfToolkitApp(App):
         self.encoding_result = None
         self.game = None
         self.game_count = 0
-        self.current = None
+        self.current = self.OPERATIONS[0]
 
     # -- layout ------------------------------------------------------------
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
         with Horizontal(id="body"):
-            with Vertical(id="operations-pane"):
-                yield Static("OPERATIONS", id="operations-heading")
-                yield ListView(id="operations")
-                with Vertical(id="params"):
-                    yield Static("PARAMETERS", id="params-heading")
-                    yield Static("", id="param-label")
-                    yield Input(placeholder="", id="param-input")
-                    yield Button("Run", variant="primary", id="run")
-                yield Static("No file open.", id="file-details")
-            with Vertical(id="main"):
-                with TabbedContent(initial="tab-board"):
-                    with TabPane("Board", id="tab-board"):
-                        yield Static("", id="board-view")
-                    with TabPane("Info", id="tab-info"):
-                        yield Static("", id="info-view")
-                    with TabPane("Moves", id="tab-moves"):
-                        yield Static("", id="moves-view")
-                    with TabPane("Notes", id="tab-notes"):
-                        yield Static("", id="notes-view")
+            # Step 1: the explorer, as in an editor's side bar.
             with Vertical(id="explorer"):
-                yield Static("EXPLORER", id="explorer-heading")
-                yield Static(str(self.start_dir), id="explorer-root-label")
+                yield Static("1  SELECT TARGET", id="explorer-heading")
+                yield Static(str(self.start_dir), id="explorer-dir")
                 yield SgfFileExplorer(str(self.start_dir), id="explorer-tree")
+            # Steps 2 and 3: the actions, then their result.
+            with Vertical(id="actions-and-results"):
+                with Vertical(id="operations-pane"):
+                    yield Static("2  SELECT ACTION", id="operations-heading")
+                    yield ListView(id="operations")
+                with Vertical(id="results"):
+                    yield Static("No file open.", id="target-bar")
+                    with Horizontal(id="run-bar"):
+                        yield Static("", id="param-label")
+                        yield Input(placeholder="", id="param-input")
+                        yield Button("Run", variant="primary", id="run")
+                    with TabbedContent(initial="tab-board"):
+                        with TabPane("Board", id="tab-board"):
+                            yield Static("", id="board-view")
+                        with TabPane("Info", id="tab-info"):
+                            yield Static("", id="info-view")
+                        with TabPane("Moves", id="tab-moves"):
+                            yield Static("", id="moves-view")
+                        with TabPane("Notes", id="tab-notes"):
+                            yield Static("", id="notes-view")
+        yield OperationHelp(id="help")
         yield Footer()
 
     def on_mount(self):
@@ -184,13 +333,14 @@ class SgfToolkitApp(App):
         for _identifier, label, _prompt, _default in self.OPERATIONS:
             listing.append(ListItem(Label(label)))
         listing.focus()
-        self._set_operation(0)
+        self._set_action(0)
+        self._update_target_bar()
         self._placeholder("board-view",
-                          "Choose an .sgf file in the EXPLORER on the right.")
+                          "Choose an .sgf file in the EXPLORER on the left.")
         self._placeholder("info-view", "No file open.")
         self._placeholder("moves-view", "No file open.")
         self._placeholder("notes-view",
-                          "Messages from operations appear here.")
+                          "Messages from actions appear here.")
 
     # -- small helpers -----------------------------------------------------
 
@@ -217,29 +367,38 @@ class SgfToolkitApp(App):
     def _require_file(self):
         if self.game is None:
             self.notify("Choose an .sgf file in the explorer first.",
-                        title="No file open", severity="warning")
+                        title="No target selected", severity="warning")
             return False
         return True
 
-    def _set_operation(self, index):
+    def _set_action(self, index):
+        if not 0 <= index < len(self.OPERATIONS):
+            return
         self.current = self.OPERATIONS[index]
-        identifier, label, prompt, default = self.current
-        label_widget = self.query_one("#param-label", Static)
+        identifier, _label, prompt, default = self.current
         input_widget = self.query_one("#param-input", Input)
         if prompt is None:
-            label_widget.update(Text("(no parameters)", style="dim"))
+            self._set_parameter_prompt(None)
             input_widget.value = ""
             input_widget.disabled = True
         else:
-            label_widget.update(prompt)
+            self._set_parameter_prompt(prompt)
             input_widget.disabled = False
             input_widget.value = self._default_parameter(identifier, default)
-        self.query_one("#run", Button).disabled = prompt is None and \
-            identifier not in ("info", "properties", "moves", "check",
-                               "encoding", "save")
+        self.query_one(OperationHelp).update_for(identifier)
+
+    def _set_parameter_prompt(self, prompt):
+        """Show which target the parameter applies to, and what is wanted."""
+        label = self.query_one("#param-label", Static)
+        text = Text()
+        if self.path is not None:
+            text.append(self.path.name, style="bold")
+            text.append("  ")
+        text.append(prompt if prompt else "(no parameters)",
+                    style="" if prompt else "dim")
+        label.update(text)
 
     def _default_parameter(self, identifier, default):
-        """Work out the parameter box's initial value for an operation."""
         if self.path is None:
             return str(default)
         source = Path(self.path)
@@ -247,7 +406,31 @@ class SgfToolkitApp(App):
             return str(source.with_name(source.stem + "_files"))
         if identifier == "board":
             return ""
+        # Suggest a new name; _output_path() avoids collisions.
         return str(source.with_name(source.stem + default + source.suffix))
+
+    def _update_target_bar(self):
+        """Describe the target: its size, board, game count and encoding."""
+        bar = self.query_one("#target-bar", Static)
+        if self.path is None:
+            bar.update(Text("Target:  (none selected) — choose a file in the "
+                            "explorer", style="bold"))
+            return
+        text = Text()
+        text.append("%d bytes" % len(self.raw))
+        if self.game is not None:
+            side = self.game.get_size()
+            text.append("   %dx%d" % (side, side))
+        text.append("   %d game%s" % (self.game_count,
+                                      "" if self.game_count == 1 else "s"))
+        if self.game_count > 1:
+            text.append(" (first used)", style="yellow")
+        if self.encoding_result is not None:
+            result = self.encoding_result
+            text.append("   %s" % result.encoding,
+                        style="yellow" if result.mismatch
+                        and not result.ascii_only else "dim")
+        bar.update(text)
 
     # -- file loading ------------------------------------------------------
 
@@ -256,7 +439,7 @@ class SgfToolkitApp(App):
         self.load_file(event.path)
 
     def load_file(self, path):
-        """Read and parse an .sgf file, making it the current file."""
+        """Read and parse an .sgf file, making it the target."""
         path = Path(path)
         try:
             raw = path.read_bytes()
@@ -273,7 +456,7 @@ class SgfToolkitApp(App):
             self.game_count = len(sgf_grammar.parse_sgf_collection(raw))
         except ValueError as e:
             self.game_count = 0
-            self._update_file_details("unparseable")
+            self._update_target_bar()
             self.notify("Not a usable SGF file: %s" % e,
                         title="Parse error", severity="error")
             return
@@ -294,61 +477,36 @@ class SgfToolkitApp(App):
                 self.game = sgf.Sgf_game.from_bytes(
                     raw, override_encoding=encoding)
         except (ValueError, LookupError) as e:
-            self._update_file_details("unparseable")
+            self._update_target_bar()
             self.notify("Can't parse the file: %s" % e,
                         title="Parse error", severity="error")
             return
 
-        self._update_file_details()
+        self._update_target_bar()
         self._show_game_info()
         self._show_board()
         self._show_moves()
-        self._set_operation(self.query_one("#operations", ListView).index or 0)
+        # Refresh the parameter box, which may suggest a file name.
+        self._set_action(self.query_one("#operations", ListView).index or 0)
         self._show("tab-board")
         message = "Opened %s" % path.name
         if self.game_count > 1:
             message += "  (%d games; only the first is used)" % self.game_count
         self._note(message)
-        self.notify(message, title="Opened")
+        self.notify(message, title="Target selected")
 
-    def _update_file_details(self, problem=None):
-        widget = self.query_one("#file-details", Static)
-        if self.path is None:
-            widget.update(Text("No file open.", style="italic dim"))
-            return
-        table = Table.grid(padding=(0, 1))
-        table.add_column(style="bold", justify="right")
-        table.add_column()
-        table.add_row("File", self.path.name)
-        if problem:
-            table.add_row("Status", Text(problem, style="bold red"))
-        else:
-            table.add_row("Size", "%d bytes" % len(self.raw))
-            if self.game is not None:
-                side = self.game.get_size()
-                table.add_row("Board", "%dx%d" % (side, side))
-            table.add_row("Games", str(self.game_count))
-            if self.encoding_result is not None:
-                result = self.encoding_result
-                shown = Text(result.encoding)
-                if result.mismatch and not result.ascii_only:
-                    shown.append(" (CA differs)", style="yellow")
-                table.add_row("Encoding", shown)
-        widget.update(table)
-
-    # -- running operations ------------------------------------------------
+    # -- running actions ---------------------------------------------------
 
     @on(ListView.Highlighted, "#operations")
-    def _operation_highlighted(self, event):
+    def _action_highlighted(self, event):
         if event.item is None:
             return
-        self._set_operation(self.query_one("#operations", ListView).index)
+        self._set_action(self.query_one("#operations", ListView).index)
 
     @on(ListView.Selected, "#operations")
-    def _operation_selected(self, event):
-        self._set_operation(self.query_one("#operations", ListView).index)
-        prompt = self.current[2]
-        if prompt is None:
+    def _action_selected(self, event):
+        self._set_action(self.query_one("#operations", ListView).index)
+        if self.current[2] is None:
             self.run_current_operation()
         else:
             self.query_one("#param-input", Input).focus()
@@ -365,8 +523,6 @@ class SgfToolkitApp(App):
         self.run_current_operation()
 
     def run_current_operation(self):
-        if self.current is None:
-            return
         identifier = self.current[0]
         handler = getattr(self, "op_" + identifier, None)
         if handler is None:
@@ -375,18 +531,16 @@ class SgfToolkitApp(App):
         try:
             handler()
         except Exception as e:                 # noqa: BLE001
-            # An operation failing shouldn't take the app down, and it must be
+            # An action failing shouldn't take the app down, and it must be
             # visible: show it in the result pane as well as notifying, so a
             # failure can't pass unnoticed.
             import traceback
             detail = "%s failed:\n\n%s" % (identifier, traceback.format_exc())
-            self._set_view("info-view",
-                           Text(detail, style="bold red"))
+            self._set_view("info-view", Text(detail, style="bold red"))
             self._show("tab-info")
             self._note("%s failed: %s" % (identifier, e), style="bold red")
             try:
-                self.notify(str(e), title="Operation failed",
-                            severity="error")
+                self.notify(str(e), title="Action failed", severity="error")
             except Exception:                  # noqa: BLE001
                 pass
 
@@ -562,7 +716,7 @@ class SgfToolkitApp(App):
             self.notify("Nothing to remove: the file is already clean.")
             self._note("%s: already clean" % self.path.name, style="green")
             return
-        target = self._output_path("-clean")
+        target = self._output_path()
         if target is None:
             return
         game = self._reparse()
@@ -602,7 +756,7 @@ class SgfToolkitApp(App):
             self.notify("This file is already UTF-8.", title="Nothing to do")
             self._note("%s: already UTF-8" % self.path.name, style="green")
             return
-        target = self._output_path("-utf8")
+        target = self._output_path()
         if target is None:
             return
         parsing_encoding = None
@@ -620,7 +774,8 @@ class SgfToolkitApp(App):
 
     # 9-12 -- transforms
     def op_rotate_cw(self):
-        self._transform(sgf_transform.ROTATE_CW, "-rotate_cw", "turned clockwise")
+        self._transform(sgf_transform.ROTATE_CW, "-rotate_cw",
+                        "turned clockwise")
 
     def op_rotate_acw(self):
         self._transform(sgf_transform.ROTATE_ACW, "-rotate_acw",
@@ -637,7 +792,7 @@ class SgfToolkitApp(App):
     def _transform(self, transformation, suffix, description):
         if not self._require_file():
             return
-        target = self._output_path(suffix)
+        target = self._output_path()
         if target is None:
             return
         # Transforms modify a game in place, so work on a fresh parse and leave
@@ -706,10 +861,12 @@ class SgfToolkitApp(App):
             self.notify("Wrote %s" % path.name, title="Saved")
         return path
 
-    def _output_path(self, suffix):
+    def _output_path(self):
         """Resolve the output path from the parameter box.
 
-        Passing '-' as the parameter writes back to the open file.
+        An existing file is never overwritten: a numbered name is used
+        instead, so a mistyped name can't destroy a file. Passing '-' writes
+        back to the open file, which is how the Save action already behaves.
         """
         answer = self._parameter()
         if not answer:
@@ -720,10 +877,24 @@ class SgfToolkitApp(App):
         path = Path(answer).expanduser()
         if not path.is_absolute():
             path = Path(self.path).parent / path
+        if path.exists() and path != Path(self.path):
+            path = self._unused_name(path)
+            self.notify("That name exists; writing %s instead." % path.name,
+                        title="Not overwritten", severity="warning")
+        return path
+
+    @staticmethod
+    def _unused_name(path):
+        stem = path.stem
+        for number in range(1, 1000):
+            candidate = path.with_name("%s-%d%s" % (stem, number,
+                                                    path.suffix))
+            if not candidate.exists():
+                return candidate
         return path
 
     def _reparse(self):
-        """Parse the current file again, using the detected encoding."""
+        """Parse the target again, using the detected encoding."""
         if self.encoding_result is None:
             return sgf.Sgf_game.from_bytes(self.raw)
         return sgf.Sgf_game.from_bytes(
@@ -743,6 +914,10 @@ class SgfToolkitApp(App):
     def action_focus_operations(self):
         self.query_one("#operations").focus()
 
+    def action_toggle_help(self):
+        help_pane = self.query_one(OperationHelp)
+        help_pane.display = not help_pane.display
+
     def action_refresh_explorer(self):
         self.query_one("#explorer-tree").reload()
         self.notify("File list refreshed.")
@@ -759,7 +934,7 @@ class SgfToolkitApp(App):
             return
         self.start_dir = path.resolve()
         self.sub_title = str(self.start_dir)
-        self.query_one("#explorer-root-label", Static).update(str(self.start_dir))
+        self.query_one("#explorer-dir", Static).update(str(self.start_dir))
         explorer = self.query_one("#explorer-tree", SgfFileExplorer)
         explorer.path = self.start_dir
         explorer.reload()
