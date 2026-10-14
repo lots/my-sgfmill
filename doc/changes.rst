@@ -19,6 +19,10 @@ Changes
   target in the file explorer, choose an action, see the result), and a single
   message pane across the bottom describing the highlighted action.
 
+  The file explorer can walk up out of the directory it was started on: it
+  offers a ``..`` entry for the parent, any directory selected in it becomes
+  the new root, and ``Backspace`` goes up a level.
+
   Selecting one of the four board transformations draws the resulting board
   straight away, so the effect can be seen before anything is written; ``Run``
   then saves that result. The file that was opened is never transformed in

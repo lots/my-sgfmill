@@ -23,6 +23,9 @@ from sgfmill import ascii_boards
 from sgfmill import sgf
 
 
+_ROOT = str(Path(__file__).resolve().parent.parent)
+
+
 def make_tests(suite):
     suite.addTests(sgfmill_test_support.make_simple_tests(globals()))
 
@@ -274,6 +277,91 @@ def test_run_saves_the_transformed_board(tc):
 def _plays(game):
     from sgfmill import sgf_moves
     return sgf_moves.get_setup_and_moves(game)
+
+
+def test_explorer_can_go_up_a_folder(tc):
+    """The explorer should offer '..' and follow it to the parent folder.
+
+    The tree is rooted at one directory, so without this there is no way to
+    reach anything above the directory the app was started on.
+    """
+    with scratch_dir() as tmp:
+        inner = Path(tmp) / "inner"
+        inner.mkdir()
+        _write_sample(str(inner), name="deep.sgf")
+        _write_sample(tmp, name="shallow.sgf")
+
+        async def scenario():
+            app = SgfToolkitApp(str(inner))
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#explorer-tree")
+                start = Path(tree.path)
+                tc.assertEqual(start, inner.resolve())
+                # The parent link is offered, with the parent's path.
+                entry = _node_named(tree, "..")
+                tc.assertIsNotNone(entry, "no '..' entry in the explorer")
+                tc.assertEqual(entry.data.path, start.parent)
+
+                # Selecting it re-roots the tree one level up.
+                app.action_focus_explorer()
+                await pilot.pause()
+                for _ in range(len(tree.root.children) + 1):
+                    await pilot.press("down")
+                await pilot.pause()
+                tc.assertEqual(str(tree.cursor_node.label), "..")
+                await pilot.press("enter")
+                await pilot.pause()
+                tc.assertEqual(Path(tree.path), start.parent)
+                # The listing is now the parent's, and it can go up again.
+                tc.assertIsNotNone(_node_named(tree, ".."))
+        _run(scenario())
+
+def test_explorer_backspace_goes_up(tc):
+    """Backspace should do the same as following '..'."""
+    with scratch_dir() as tmp:
+        inner = Path(tmp) / "inner"
+        inner.mkdir()
+
+        async def scenario():
+            app = SgfToolkitApp(str(inner))
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                tree = app.query_one("#explorer-tree")
+                start = Path(tree.path)
+                app.action_focus_explorer()
+                await pilot.pause()
+                await pilot.press("backspace")
+                await pilot.pause()
+                tc.assertEqual(Path(tree.path), start.parent)
+                # ...and the label above the tree keeps up.
+                label = _text_of(app, "#explorer-dir")
+                tc.assertIn(str(start.parent), label)
+        _run(scenario())
+
+def test_explorer_has_no_parent_at_the_top(tc):
+    """At the top of a filesystem there is no parent to offer."""
+    anchor = Path(_ROOT).anchor          # 'C:\\' on Windows, '/' elsewhere
+    async def scenario():
+        app = SgfToolkitApp(anchor)
+        async with app.run_test(size=(140, 40)) as pilot:
+            await pilot.pause()
+            tree = app.query_one("#explorer-tree")
+            tc.assertEqual(Path(tree.path), Path(anchor))
+            tc.assertIsNone(_node_named(tree, ".."),
+                            "'..' should not be offered at the top")
+    _run(scenario())
+
+
+def _node_named(tree, label):
+    """Find a node by its label, anywhere in the tree."""
+    pending = [tree.root]
+    while pending:
+        node = pending.pop()
+        if str(node.label) == label:
+            return node
+        pending.extend(node.children)
+    return None
 
 
 def _position_of(app):

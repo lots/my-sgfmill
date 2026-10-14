@@ -102,6 +102,11 @@ The three panels each take the full height of the top row; nothing is stacked.
   directory: directories, plus `.sgf` files only, so hidden directories
   (`.git`, `__pycache__`) stay out of the way. Selecting a file opens it and
   makes it the target.
+
+  There is a `..` entry at the top of the list for the parent directory, so you
+  can walk up to anywhere on the disk; selecting any directory in the tree
+  moves the root there, and `Backspace` goes up a level. (At the top of a
+  filesystem there is no parent, so no `..` is offered.)
 * **2 — Actions** (middle) — the list of actions, with the parameter box and
   **Run** button below it. Select an action to run it, or press `Ctrl+J`.
 * **3 — Results** (right) — a line describing the target (size, board, games,
@@ -122,6 +127,7 @@ The three panels each take the full height of the top row; nothing is stacked.
 | `Enter` | In the parameter box: run the action |
 | `e` | Focus the explorer (step 1) |
 | `a` | Focus the actions list (step 2) |
+| `Backspace` | Go up one folder in the explorer |
 | `h` | Hide or show the message pane |
 | `r` | Reload the target from disk |
 | `s` | Save (write the game back to its file) |

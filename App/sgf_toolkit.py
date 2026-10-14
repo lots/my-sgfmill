@@ -31,6 +31,9 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
+# DirEntry is needed to give the '..' entry a path. Textual does not re-export
+# it from textual.widgets, so it is imported from where it lives.
+from textual.widgets._directory_tree import DirEntry
 from textual.widgets import (
     Button,
     DirectoryTree,
@@ -64,6 +67,10 @@ class SgfFileExplorer(DirectoryTree):
     Directories are kept so you can navigate. Files are restricted to .sgf,
     because nothing else can be used by this app, and hidden entries are left
     out so that .git and __pycache__ stay out of the way.
+
+    The tree is rooted at one directory, so an entry for the parent is added at
+    the top to let you walk back up; selecting any directory moves the root
+    there. Backspace does the same as selecting '..'.
     """
 
     def filter_paths(self, paths):
@@ -72,6 +79,40 @@ class SgfFileExplorer(DirectoryTree):
                 return False
             return path.is_dir() or path.suffix.lower() == ".sgf"
         return [path for path in paths if wanted(path)]
+
+    def _add_parent_entry(self):
+        """Put a '..' entry at the top of the tree, unless it is the root."""
+        root_path = Path(self.path)
+        parent = root_path.parent
+        if parent == root_path:
+            return                      # already at the top of the filesystem
+        for child in self.root.children:
+            if str(child.label) == "..":
+                return                  # already there
+        # TreeNode.add() takes allow_expand (the tree root uses a different
+        # name for the same idea).
+        self.root.add("..", data=DirEntry(parent), allow_expand=False)
+
+    async def watch_path(self):
+        """Populate the tree, then add the '..' entry on top of it.
+
+        The parent class discards the children when it reloads, so the entry
+        has to be added afterwards; doing it from the caller instead raced with
+        this reload and the entry disappeared.
+        """
+        await super().watch_path()
+        self._add_parent_entry()
+
+    def key_backspace(self):
+        """Go up one directory, as the '..' entry does."""
+        self.go_up()
+        return True
+
+    def go_up(self):
+        parent = Path(self.path).parent
+        if parent == Path(self.path):
+            return                      # already at the top of the filesystem
+        self.post_message(self.DirectorySelected(self.root, parent))
 
 
 class MessageBar(Static):
@@ -258,6 +299,7 @@ class SgfToolkitApp(App):
         Binding("escape", "reset_preview", "Reset preview"),
         Binding("e", "focus_explorer", "Explorer"),
         Binding("a", "focus_operations", "Actions"),
+        Binding("backspace", "go_up", "Up a folder"),
         Binding("h", "toggle_help", "Message"),
         Binding("r", "reload", "Reload"),
         Binding("s", "save", "Save"),
@@ -513,6 +555,15 @@ class SgfToolkitApp(App):
     @on(SgfFileExplorer.FileSelected)
     def _file_selected(self, event):
         self.load_file(event.path)
+
+    @on(SgfFileExplorer.DirectorySelected)
+    async def _directory_selected(self, event):
+        """Selecting a directory in the tree makes it the root.
+
+        That is how the '..' entry is followed, and it also lets you step into
+        a subdirectory from the explorer itself.
+        """
+        await self.set_explorer_root(event.path)
 
     def load_file(self, path):
         """Read and parse an .sgf file, making it the target."""
@@ -1110,6 +1161,39 @@ class SgfToolkitApp(App):
         self.query_one("#explorer-tree").reload()
         self.notify("File list refreshed.")
 
+    def action_go_up(self):
+        """Move the explorer to the parent directory."""
+        explorer = self.query_one("#explorer-tree", SgfFileExplorer)
+        parent = Path(explorer.path).parent
+        if parent == Path(explorer.path):
+            self.notify("Already at the top of the filesystem.",
+                        severity="warning")
+            return
+        self.run_worker(self.set_explorer_root(parent), exclusive=False)
+
+    async def set_explorer_root(self, path):
+        """Root the file explorer at a directory.
+
+        Setting the tree's path makes it reload, which also adds the '..'
+        entry, so this only has to wait for that to finish.
+        """
+        path = Path(path).resolve()
+        if not path.is_dir():
+            self.notify("%s is not a directory." % path, severity="error")
+            return
+        self.start_dir = path
+        self.sub_title = str(path)
+        self.query_one("#explorer-dir", Static).update(str(path))
+        explorer = self.query_one("#explorer-tree", SgfFileExplorer)
+        if Path(explorer.path) == path:
+            await explorer.reload()
+            explorer._add_parent_entry()
+        else:
+            # Assigning the path triggers watch_path, which reloads and adds
+            # the '..' entry once the listing is in place.
+            explorer.path = path
+        explorer.focus()
+
     def action_go_to_directory(self):
         answer = self.query_one("#param-input", Input).value.strip()
         if not answer:
@@ -1120,12 +1204,7 @@ class SgfToolkitApp(App):
         if not path.is_dir():
             self.notify("%s is not a directory." % path, severity="error")
             return
-        self.start_dir = path.resolve()
-        self.sub_title = str(self.start_dir)
-        self.query_one("#explorer-dir", Static).update(str(self.start_dir))
-        explorer = self.query_one("#explorer-tree", SgfFileExplorer)
-        explorer.path = self.start_dir
-        explorer.reload()
+        self.run_worker(self.set_explorer_root(path), exclusive=False)
 
 
 USAGE = """\
@@ -1150,7 +1229,8 @@ Keys:
   e        focus the explorer        a   focus the action list
   h        hide/show the message pane
   r        reload the file           s   save it
-  d        open a directory          Ctrl+N  refresh the file list
+  Backspace  go up a folder          d   open a directory
+  Ctrl+N   refresh the file list
   q        quit
 
 Actions which write files suggest a new name and never modify the file you
