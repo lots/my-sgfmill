@@ -15,9 +15,15 @@ Changes
   environment variables (``SGF_TOOLKIT_HEADLESS`` and
   ``SGF_TOOLKIT_EXIT_AFTER_STARTUP``) let it start where there is no terminal.
 
-  The window is two rows: three panels side by side on the top row (select a
-  target in the file explorer, choose an action, see the result), and a single
-  message pane across the bottom describing the highlighted action.
+  The window is two rows: four panels side by side on the top row (select a
+  target in the file explorer, choose an action, see the whole game as a tree,
+  see the result), and a single message pane across the bottom describing the
+  highlighted action.
+
+  The *Show tree* action fills the tree panel with every node of the file, so
+  the main line runs down it with variations branching off. Clicking an entry
+  draws the position that node leads to on the board, honouring setup stones
+  and passes anywhere in the tree.
 
   The file explorer can walk up out of the directory it was started on: it
   offers a ``..`` entry for the parent, any directory selected in it becomes

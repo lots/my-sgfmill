@@ -46,19 +46,37 @@ from textual.widgets import (
     Static,
     TabbedContent,
     TabPane,
+    Tree,
 )
 
 from sgfmill import ascii_boards
+from sgfmill import boards
 from sgfmill import sgf
 from sgfmill import sgf_encoding
 from sgfmill import sgf_grammar
 from sgfmill import sgf_moves
 from sgfmill import sgf_normalise
+from sgfmill import sgf_properties
 from sgfmill import sgf_transform
 from sgfmill.common import format_vertex
 
 
 APP_TITLE = "SGF Toolkit"
+
+
+class _Position:
+    """A board and the moves that reach a particular node of the game tree.
+
+    'board' already holds any setup stones, so the moves in 'path' can simply
+    be played on it. 'plays' is the leftmost variation, used only to describe
+    the position, or None when that can't be read.
+    """
+
+    def __init__(self, game, board, path, plays):
+        self.game = game
+        self.board = board
+        self.path = path
+        self.plays = plays
 
 
 class SgfFileExplorer(DirectoryTree):
@@ -142,6 +160,11 @@ class MessageBar(Static):
             "List every node of the tree, with its properties.",
             None,
             "Info tab.",
+        ),
+        "tree": (
+            "Show the whole game as a tree, variations and all.",
+            "Click (or press Enter on) a move to see its position.",
+            "Board tab; the tree is on the left.",
         ),
         "moves": (
             "List the moves of the leftmost variation.",
@@ -227,6 +250,19 @@ class MessageBar(Static):
         self.update(text)
 
 
+class SgfTreeView(Tree):
+    """The whole game as a tree: the main line, with variations hanging off it.
+
+    Each entry stands for one node of the SGF, and carrying the SGF node means
+    selecting an entry can draw the position that node leads to.
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__("(no file open)", **kwargs)
+        self.show_root = True
+        self.guide_depth = 2
+
+
 class SgfToolkitApp(App):
     """Browse .sgf files and invoke sgfmill's functions on them."""
 
@@ -255,12 +291,26 @@ class SgfToolkitApp(App):
     }
 
     #operations-pane {
-        width: 38;
+        width: 34;
         min-width: 26;
         border-right: solid $panel-lighten-2;
     }
-    #operations { height: 1fr; }
+    #operations { height: 1fr; min-height: 6; }
     #params { height: auto; padding: 0 1; }
+
+    /* The game tree, filled in by the 'Show tree' action. */
+    #game-tree-pane {
+        width: 40;
+        min-width: 26;
+        border-right: solid $panel-lighten-2;
+    }
+    #tree-heading {
+        background: $panel;
+        color: $text;
+        padding: 0 1;
+        text-style: bold;
+    }
+    #game-tree { height: 1fr; }
     #param-label {
         height: 3;
         content-align: left middle;
@@ -314,6 +364,7 @@ class SgfToolkitApp(App):
     # A prompt of None means the action has no parameter.
     OPERATIONS = [
         ("board",      "Show board position",         "Move number (blank = final)", ""),
+        ("tree",       "Show tree (click a move)",     None, ""),
         ("info",       "Show game information",        None, ""),
         ("properties", "List properties in the tree",  None, ""),
         ("moves",      "List moves",                   None, ""),
@@ -376,6 +427,9 @@ class SgfToolkitApp(App):
                     yield Input(placeholder="", id="param-input")
                     yield Button("Run", variant="primary", id="run")
                     yield Button("Apply one more", id="apply-again")
+            with Vertical(id="game-tree-pane"):
+                yield Static("3  GAME TREE", id="tree-heading")
+                yield SgfTreeView(id="game-tree")
             with Vertical(id="results"):
                 yield Static("", id="target-bar")
                 with TabbedContent(initial="tab-board"):
@@ -701,10 +755,12 @@ class SgfToolkitApp(App):
         self._show("tab-board")
 
     def _show_board(self, move_number=None, transforms=None):
-        """Draw a position, optionally after some board transformations.
+        """Draw the position from the game's leftmost variation.
 
-        'transforms' is a sequence of sgf_transform constants, applied in
-        order to a copy of the game, so the target itself is not changed.
+        move_number -- show the position before that move (default: the end)
+        transforms  -- board transformations to apply first, in order. They are
+                       applied to a copy of the game, so the target itself is
+                       not changed.
         """
         game = self.game
         if transforms:
@@ -717,8 +773,29 @@ class SgfToolkitApp(App):
             self._set_view("board-view", Text(str(e), style="bold red"))
             return
         limit = len(plays) if move_number is None else max(0, move_number - 1)
-        for colour, move in plays[:limit]:
-            if move is None:
+        path = [("move", colour, move) for colour, move in plays[:limit]]
+        if transforms:
+            caption = "PREVIEW: %s" % self._transform_words(transforms)
+            note = "%d applied, Run saves it" % len(transforms)
+        elif move_number is None:
+            caption = None
+            note = None
+        else:
+            caption = "before move %d" % move_number
+            note = None
+        self._draw_position(_Position(self.game, board, path, plays), caption,
+                            note)
+
+    def _draw_position(self, position, caption=None, note=None):
+        """Draw a position on the Board tab.
+
+        'position' holds a start board (with any setup stones) and the moves to
+        play on it; 'caption' and 'note' override the usual heading, which
+        describes the position itself.
+        """
+        board = position.board
+        for kind, colour, move in position.path:
+            if kind != "move" or move is None:
                 continue
             try:
                 board.play(move[0], move[1], colour)
@@ -726,22 +803,19 @@ class SgfToolkitApp(App):
                 self._note("Stopped early: illegal move in the file.",
                            style="yellow")
                 break
-        caption = Text()
-        caption.append(self.path.name, style="bold")
-        if transforms:
-            caption.append("   PREVIEW: %s" % self._transform_words(transforms),
-                           style="bold yellow")
-            caption.append("   (%d applied, Run saves it)" % len(transforms),
-                           style="dim")
-        elif move_number is None:
-            caption.append("   " + self._position_summary(plays))
+        heading = Text()
+        heading.append(self.path.name, style="bold")
+        heading.append("   ")
+        if caption:
+            heading.append(caption, style="bold yellow")
         else:
-            caption.append("   before move %d" % move_number)
+            heading.append("final position: " + self._position_summary(position))
+        if note:
+            heading.append("   (%s)" % note, style="dim")
         self._set_view("board-view",
-                       Text.assemble(caption, "\n\n",
+                       Text.assemble(heading, "\n\n",
                                      Text(ascii_boards.render_board(board))))
-        if transforms:
-            self._show("tab-board")
+        self._show("tab-board")
 
     def _transform_words(self, transforms):
         """Describe a run of transformations, collapsing repeats.
@@ -757,27 +831,33 @@ class SgfToolkitApp(App):
             return "%d x %s" % (len(words), words[0])
         return " then ".join(words)
 
-    def _position_summary(self, plays):
+    def _position_summary(self, position):
         """Describe a position in terms of the moves that produced it.
 
         Moves and stones are only the same number when nothing was captured and
         nobody passed, so say what is on the board and why, rather than leaving
         a count of moves next to a different number of stones.
         """
-        passes = sum(1 for _colour, move in plays if move is None)
-        played = len(plays) - passes
-        black_setup, white_setup, _empty = self.game.get_root().get_setup_stones()
-        stones = len(black_setup) + len(white_setup)
-        parts = ["%d move%s" % (len(plays), "" if len(plays) == 1 else "s")]
+        if position.plays is None:
+            return "this position"
+        plays = position.plays
+        moves = sum(1 for kind, _c, move in position.path
+                    if kind == "move" and move is not None)
+        passes = sum(1 for kind, _c, move in position.path
+                     if kind == "move" and move is None)
+        parts = ["%d move%s" % (moves + passes,
+                                "" if moves + passes == 1 else "s")]
         if passes:
             parts.append("%d pass%s" % (passes, "" if passes == 1 else "es"))
-        if played:
+        if moves:
             parts.append("%d stone%s by the moves"
-                         % (played, "" if played == 1 else "s"))
+                         % (moves, "" if moves == 1 else "s"))
+        black_setup, white_setup, _empty = self.game.get_root().get_setup_stones()
+        stones = len(black_setup) + len(white_setup)
         if stones:
             parts.append("%d setup stone%s"
                          % (stones, "" if stones == 1 else "s"))
-        return "final position: " + ", ".join(parts)
+        return ", ".join(parts)
 
     # 2 -- game information
     def op_info(self):
@@ -827,7 +907,156 @@ class SgfToolkitApp(App):
             table.add_row(str(key), value)
         self._set_view("info-view", table)
 
-    # 3 -- properties in the tree
+    # 3 -- the game tree
+    def op_tree(self):
+        """Show the whole game as a tree, and let a click pick a position."""
+        if not self._require_file():
+            return
+        self._build_game_tree()
+        self.notify("Click a move in the tree to see its position.",
+                    title="Game tree")
+        self.query_one("#game-tree").focus()
+
+    def _build_game_tree(self):
+        """Fill the tree pane with the game, one entry per SGF node."""
+        tree = self.query_one("#game-tree", SgfTreeView)
+        tree.clear()
+        side = self.game.get_size()
+        root = self.game.get_root()
+        found = self._empty_if_unreadable(root)
+        tree.root.set_label(self._node_label(root, side))
+        if found is not None:
+            self._add_tree_children(tree.root, root, side, found)
+        else:
+            self._note("Disconnected node in the tree; not shown",
+                       style="yellow")
+        tree.root.expand()
+
+    @staticmethod
+    def _empty_if_unreadable(node):
+        """The node's children, or None if one is unreachable.
+
+        The tree data structure allows an operation called 'reparent' which,
+        in this library, can leave the tree in a state the top-level functions
+        can't read. Rather than raising in the middle of building the tree,
+        stop there.
+        """
+        try:
+            return list(node)
+        except Exception:                      # noqa: BLE001
+            return None
+
+    def _add_tree_children(self, parent, node, side, children):
+        for child in children:
+            found = self._empty_if_unreadable(child)
+            button = parent.add(self._node_label(child, side), data=child,
+                                expand=True)
+            if found is not None:
+                self._add_tree_children(button, child, side, found)
+
+    def _node_label(self, node, side):
+        """One line describing a node: its move, or what else it carries.
+
+        A move is what a viewer wants to see. For any other node, names are
+        only shown for properties that mean something to a reader: a file full
+        of private annotations would otherwise fill the pane with noise such as
+        'CA GN HA KM +7'.
+        """
+        colour, raw = node.get_raw_move()
+        if colour is not None:
+            try:
+                move = None if raw == b"" else \
+                    sgf_properties.interpret_go_point(raw, side)
+            except (ValueError, TypeError):
+                move = None
+            where = "pass" if move is None else format_vertex(move)
+            return "%s %s" % ("B" if colour == "b" else "W", where)
+        names = sorted(node.get_raw_property_map())
+        if not names:
+            return "(empty)"
+        interesting = [name for name in names
+                       if name in sgf_normalise.STANDARD_PROPERTIES
+                       and name not in ("FF", "GM", "SZ", "CA", "AP", "ST")]
+        if not interesting:
+            # Nothing recognisable: say how much is here, without listing it.
+            return "%d propert%s" % (len(names), "y" if len(names) == 1
+                                     else "ies")
+        shown = " ".join(interesting[:4])
+        if len(interesting) > 4:
+            shown += " +%d" % (len(interesting) - 4)
+        return shown
+
+    @on(SgfTreeView.NodeSelected)
+    def _tree_node_selected(self, event):
+        """Show the board position at the node that was clicked."""
+        node = event.node.data
+        if node is None:
+            return
+        self._show_tree_position(node)
+
+    def _show_tree_position(self, node):
+        if node is None:
+            # The tree's own root entry is selectable but stands for no SGF
+            # node, so there is no position to show.
+            self.notify("That is the tree itself; click one of its moves.",
+                        severity="information")
+            return
+        position = self._position_for(node)
+        label = self._node_label(node, self.game.get_size())
+        self._draw_position(position, caption="at %s" % label)
+        self._note("Showing the position at %s" % label)
+
+    # -- reading positions out of the tree --------------------------------
+
+    def _main_line_plays(self):
+        """The moves of the leftmost variation, for the panel's summary."""
+        try:
+            _board, plays = sgf_moves.get_setup_and_moves(self.game)
+        except ValueError:
+            return []
+        return plays
+
+    def _position_for(self, node):
+        """The position a node leads to, following the path from the root.
+
+        The node's ancestors in the game tree give the moves to replay, which
+        is the position a viewer shows when you click that node. Setup stones
+        can appear anywhere in the tree, so they are applied as the path is
+        walked, not only at the root.
+        """
+        chain = []
+        walker = node
+        while walker is not None:
+            chain.append(walker)
+            walker = walker.parent
+        chain.reverse()                        # root first
+
+        side = self.game.get_size()
+        board = boards.Board(side)
+        black, white, empty = chain[0].get_setup_stones()
+        board.apply_setup(black, white, empty)
+
+        path = []
+        for sgf_node in chain[1:]:
+            black, white, empty = sgf_node.get_setup_stones()
+            if black or white or empty:
+                board.apply_setup(black, white, empty)
+            colour, raw = sgf_node.get_raw_move()
+            if colour is None:
+                continue
+            if raw == b"":
+                path.append(("move", colour, None))     # a pass
+                continue
+            try:
+                move = sgf_properties.interpret_go_point(raw, side)
+            except ValueError:
+                self._note("Could not read a move in the tree; stopping there",
+                           style="yellow")
+                break
+            path.append(("move", colour, move))
+        return _Position(self.game, board, path, self._main_line_plays())
+
+    # 4 -- properties in the tree
     def op_properties(self):
         if not self._require_file():
             return
@@ -1219,7 +1448,8 @@ directory is used if it is omitted. It must not begin with '-'.
 On screen:
   1  the file explorer  choose the .sgf file to work on
   2  the action list    pick what to do, with its parameter beneath
-  3  the result         the board diagram, tables, move list and log
+  3  the game tree      the whole file; click a move to see its position
+  4  the result         the board diagram, tables, move list and log
   the message pane      what the highlighted action does
 
 Keys:

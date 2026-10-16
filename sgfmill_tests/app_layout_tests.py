@@ -370,6 +370,144 @@ def _position_of(app):
     return text.split("\n", 1)[1] if "\n" in text else ""
 
 
+def test_show_tree_lists_the_whole_game(tc):
+    """'Show tree' should list every node, including variations."""
+    with scratch_dir() as tmp:
+        path = Path(tmp) / "branches.sgf"
+        # Root, two main-line moves, then two variations off the second.
+        path.write_bytes(
+            b"(;FF[4]GM[1]CA[UTF-8]SZ[9]PB[Black]PW[White]"
+            b";B[cg];W[gc](;B[gg])(;B[cc];W[gg]))")
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 46)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = [o[0] for o in app.OPERATIONS].index("tree")
+                app._set_action(index)
+                app.run_current_operation()
+                await pilot.pause()
+                tree = app.query_one("#game-tree")
+                labels = _tree_labels(tree.root)
+                # One entry per SGF node: the root (showing its properties)
+                # plus five moves -- three on the main line and the two that
+                # begin the variations.
+                tc.assertEqual(len(labels), 6, labels)
+                # The root shows the properties a reader cares about, not
+                # the bookkeeping ones (FF, GM, SZ, CA).
+                tc.assertEqual(labels[0], "PB PW")
+                for expected in ("B C3", "W G7", "B G3", "B C7", "W G3"):
+                    tc.assertIn(expected, labels)
+        _run(scenario())
+
+def test_tree_click_shows_that_position(tc):
+    """Selecting a node should draw the board that node leads to.
+
+    Each entry is checked against the position computed independently from the
+    path through the tree, which is what makes the feature trustworthy.
+    """
+    with scratch_dir() as tmp:
+        path = Path(tmp) / "positions.sgf"
+        # A pass and setup stones as well, to exercise both.
+        path.write_bytes(
+            b"(;FF[4]GM[1]CA[UTF-8]SZ[9]AB[aa]AW[ii]PB[Black]"
+            b";B[cg];W[];B[gc](;W[gg])(;W[cc];B[gg]))")
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 46)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = [o[0] for o in app.OPERATIONS].index("tree")
+                app._set_action(index)
+                app.run_current_operation()
+                await pilot.pause()
+                tree = app.query_one("#game-tree")
+                checked = 0
+                for node in _tree_nodes(tree.root):
+                    if node.data is None:
+                        continue
+                    # Selecting posts NodeSelected, which the app handles.
+                    tree.select_node(node)
+                    await pilot.pause()
+                    shown = _text_of(app, "#board-view")
+                    want = _diagram_for_path(node.data)
+                    tc.assertIn(want, shown,
+                                "wrong position at %s" % node.label)
+                    # The caption says where the position is.
+                    tc.assertIn(str(node.label), shown.splitlines()[0])
+                    checked += 1
+                tc.assertEqual(checked, 6)
+                # ...and the Board tab is the one showing it.
+                tc.assertEqual(app.query_one("TabbedContent").active,
+                               "tab-board")
+        _run(scenario())
+
+def test_tree_entry_for_the_root_is_safe(tc):
+    """The tree's own root entry has no SGF node; selecting it must not fail."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 46)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = [o[0] for o in app.OPERATIONS].index("tree")
+                app._set_action(index)
+                app.run_current_operation()
+                await pilot.pause()
+                tree = app.query_one("#game-tree")
+                before = _text_of(app, "#board-view")
+                tree.select_node(tree.root)
+                await pilot.pause()
+                # Nothing breaks, and the board is left alone.
+                tc.assertEqual(_text_of(app, "#board-view"), before)
+        _run(scenario())
+
+
+def _tree_nodes(node):
+    """Every node of a Textual Tree, depth first."""
+    found = [node]
+    for child in node.children:
+        found.extend(_tree_nodes(child))
+    return found
+
+
+def _tree_labels(node):
+    return [str(n.label) for n in _tree_nodes(node)]
+
+
+def _diagram_for_path(sgf_node):
+    """The board diagram for a node, computed from its ancestors.
+
+    Deliberately a separate implementation from the app's: it walks the
+    ancestors, applies setup stones and replays the moves, so a mistake in the
+    app's version shows up as a difference rather than agreeing with it.
+    """
+    from sgfmill import ascii_boards, boards, sgf_properties
+    chain = []
+    walker = sgf_node
+    while walker is not None:
+        chain.append(walker)
+        walker = walker.parent
+    chain.reverse()
+    side = chain[0].owner.get_size()
+    board = boards.Board(side)
+    board.apply_setup(*chain[0].get_setup_stones())
+    for node in chain[1:]:
+        board.apply_setup(*node.get_setup_stones())
+        colour, raw = node.get_raw_move()
+        if colour and raw:
+            move = sgf_properties.interpret_go_point(raw, side)
+            board.play(move[0], move[1], colour)
+    return ascii_boards.render_board(board)
+
+
 def test_transformations_compose_into_a_cycle(tc):
     """Applying a flip twice, or a turn four times, returns to the original.
 

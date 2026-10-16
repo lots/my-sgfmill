@@ -74,29 +74,30 @@ python App/run_sgf_toolkit.py
 
 ## The layout
 
-Two rows. The top row is three panels side by side; the bottom row is a single
+Two rows. The top row is four panels side by side; the bottom row is a single
 message pane. The panels follow the order you work in: **select a target**,
-**choose an action**, **see the result**.
+**choose an action**, **see the game as a tree**, **see the result**.
 
 ```
-┌─ header ──────────────────────────────────────────────────────────────────┐
-│ 1  SELECT TARGET        │ 2  SELECT ACTION        │ 468 bytes  9x9  1 game │
-│  examples               │  Show board position    │ Board Info Moves Notes │
-│ 📂 examples             │  Show game information  │ 9x9-wg-05.sgf   final  │
-│  ├── 9x9-wg-01.sgf      │  List properties...     │                        │
-│  ├── 9x9-wg-05.sgf      │  List moves             │ 9  .  .  o  .  #  .  . │
-│  └── ff4_ex.sgf         │  Check for non-standard │ 8  .  o  .  o  o  #  # │
-│                         │  ...                    │ 7  .  o  o  #  #  .  . │
-│                         │                         │ ...                    │
-│                         │ 9x9-wg-05.sgf           │                        │
-│                         │ [ ....-clean.sgf   ]    │                        │
-│                         │ [      Run         ]    │                        │
-├─────────────────────────┴─────────────────────────┴────────────────────────┤
-│ 9x9-wg-05.sgf  Report properties FF[4] does not define for Go.  Info tab.  │
-└─ footer ───────────────────────────────────────────────────────────────────┘
+┌─ header ──────────────────────────────────────────────────────────────────────────┐
+│ 1 SELECT TARGET   │ 2 SELECT ACTION        │ 3 GAME TREE        │ 468 bytes  9x9  │
+│  examples         │  Show board position   │ ▼ GN HA KM PB +3   │ Board Info ...  │
+│ 📂 examples       │  Show tree (click...)  │ └ ▼ B F3           │ 9x9-wg-05.sgf   │
+│  ├── 9x9-wg-01    │  Show game information │   └ ▼ W E6         │ at B E3         │
+│  ├── 9x9-wg-05    │  List properties...    │     └ ▼ B C3       │                 │
+│  └── ff4_ex       │  List moves            │       └ ▼ W E4     │ 9 . . . . . . . │
+│                   │  Check for non-stand.  │         └ ▶ B E3   │ 8 . . . . . . . │
+│                   │  ...                   │                    │ 7 . . . . . . . │
+│                   │                        │                    │ 6 . . . . o . . │
+│                   │ 9x9-wg-05.sgf          │                    │ ...             │
+│                   │ [ ....-clean.sgf   ]   │                    │                 │
+│                   │ [      Run         ]   │                    │                 │
+├───────────────────┴────────────────────────┴────────────────────┴─────────────────┤
+│ 9x9-wg-05.sgf  Click a move in the tree to see its position.  Board tab.          │
+└─ footer ─────────────────────────────────────────────────────────────────────────┘
 ```
 
-The three panels each take the full height of the top row; nothing is stacked.
+The four panels each take the full height of the top row; nothing is stacked.
 
 * **1 — Explorer** (left) — a VS Code style tree rooted at the chosen
   directory: directories, plus `.sgf` files only, so hidden directories
@@ -107,9 +108,17 @@ The three panels each take the full height of the top row; nothing is stacked.
   can walk up to anywhere on the disk; selecting any directory in the tree
   moves the root there, and `Backspace` goes up a level. (At the top of a
   filesystem there is no parent, so no `..` is offered.)
-* **2 — Actions** (middle) — the list of actions, with the parameter box and
+* **2 — Actions** (second) — the list of actions, with the parameter box and
   **Run** button below it. Select an action to run it, or press `Ctrl+J`.
-* **3 — Results** (right) — a line describing the target (size, board, games,
+* **3 — Game tree** (third) — the whole game as a tree, filled in by the
+  **Show tree** action. One entry per node of the SGF file, so the main line
+  runs down the pane with variations branching off it. Move entries read
+  `B C3`; other nodes show the properties a reader cares about, or just how
+  many properties they carry. **Clicking an entry draws that position** on the
+  Board tab, and the caption says which entry it is. Setup stones anywhere in
+  the tree, and passes, are honoured. Until **Show tree** has been run the pane
+  is empty.
+* **4 — Results** (right) — a line describing the target (size, board, games,
   encoding), then a tab per kind of output: the board diagram, information and
   tables, the move list, and a running log of what the app has done.
 * **Message pane** (bottom, full width) — one line about the highlighted
@@ -142,6 +151,7 @@ Arrow keys and Enter drive the operations list and the file tree.
 | Operation | Library call |
 | --- | --- |
 | Show board position | `sgf_moves.get_setup_and_moves()` + `ascii_boards.render_board()` |
+| Show tree | `Tree_node` children, `get_raw_move()`, `sgf_properties.interpret_go_point()` |
 | Show game information | `Sgf_game.get_komi()`, `get_handicap()`, `get_player_name()`, `get_winner()` |
 | List properties in the tree | `Tree_node.get_raw_property_map()`, walking variations |
 | List moves | `sgf_moves.get_setup_and_moves()` + `common.format_vertex()` |
