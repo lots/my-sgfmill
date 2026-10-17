@@ -15,3 +15,7 @@ __pycache__
 # here. They are transient and must never be committed.
 /pytest-cache-files-*/
 /.buildtmp/
+
+# Web app development dependencies (the app itself needs none)
+node_modules/
+

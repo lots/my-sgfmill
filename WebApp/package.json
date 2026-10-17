@@ -1,0 +1,17 @@
+{
+  "name": "sgf-toolkit-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A web front end for the sgfmill library. The app itself has no runtime dependencies.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node tests/engine_test.mjs && node tests/ui_test.mjs",
+    "test:engine": "node tests/engine_test.mjs",
+    "test:ui": "node tests/ui_test.mjs",
+    "serve": "node tests/serve.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0"
+  }
+}

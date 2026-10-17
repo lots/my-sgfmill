@@ -9,6 +9,7 @@ Sgfmill
 
    intro
    examples
+   webapp
    property_types
    sgfmill_package
    properties

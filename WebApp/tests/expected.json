@@ -1,0 +1,1195 @@
+{
+ "encodings": {
+  "enc-ascii-ca.sgf": {
+   "asciiOnly": true,
+   "declared": "ISO-8859-1",
+   "encoding": "ISO-8859-1",
+   "mismatch": false
+  },
+  "enc-latin1-declared.sgf": {
+   "asciiOnly": false,
+   "declared": "ISO-8859-1",
+   "encoding": "ISO-8859-1",
+   "mismatch": false
+  },
+  "enc-latin1-undeclared.sgf": {
+   "asciiOnly": false,
+   "declared": null,
+   "encoding": "ISO-8859-1",
+   "mismatch": true
+  },
+  "enc-mismatch.sgf": {
+   "asciiOnly": false,
+   "declared": "UTF-8",
+   "encoding": "ISO-8859-1",
+   "mismatch": true
+  },
+  "enc-utf8-bom.sgf": {
+   "asciiOnly": false,
+   "declared": "UTF-8",
+   "encoding": "UTF-8",
+   "mismatch": false
+  },
+  "enc-utf8.sgf": {
+   "asciiOnly": false,
+   "declared": "UTF-8",
+   "encoding": "UTF-8",
+   "mismatch": false
+  }
+ },
+ "games": {
+  "big19.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[pd];W[dp];B[pp];W[dd];\nB[fq];W[cn];B[jp];W[qn])\n"
+   },
+   "diagram": "19  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n18  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n17  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n16  .  .  .  o  .  .  .  .  .  .  .  .  .  .  .  #  .  .  .\n15  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n14  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n13  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n12  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n11  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n10  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 9  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 8  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 7  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 6  .  .  o  .  .  .  .  .  .  .  .  .  .  .  .  .  o  .  .\n 5  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 4  .  .  .  o  .  .  .  .  .  #  .  .  .  .  .  #  .  .  .\n 3  .  .  .  .  .  #  .  .  .  .  .  .  .  .  .  .  .  .  .\n 2  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n 1  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .  .\n    A  B  C  D  E  F  G  H  J  K  L  M  N  O  P  Q  R  S  T",
+   "mainLineCount": 9,
+   "nodeCount": 9,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "15,15"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "15,15"
+     ],
+     "white": [
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "3,15"
+     ],
+     "white": [
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,2"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15",
+      "3,9"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,2"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15",
+      "3,9"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,16",
+      "5,2"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      15,
+      15
+     ]
+    ],
+    [
+     "w",
+     [
+      3,
+      3
+     ]
+    ],
+    [
+     "b",
+     [
+      3,
+      15
+     ]
+    ],
+    [
+     "w",
+     [
+      15,
+      3
+     ]
+    ],
+    [
+     "b",
+     [
+      2,
+      5
+     ]
+    ],
+    [
+     "w",
+     [
+      5,
+      2
+     ]
+    ],
+    [
+     "b",
+     [
+      3,
+      9
+     ]
+    ],
+    [
+     "w",
+     [
+      5,
+      16
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "15,15"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "15,15"
+     ],
+     "white": [
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "3,15"
+     ],
+     "white": [
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,2"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15",
+      "3,9"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,2"
+     ]
+    },
+    {
+     "black": [
+      "15,15",
+      "2,5",
+      "3,15",
+      "3,9"
+     ],
+     "white": [
+      "15,3",
+      "3,3",
+      "5,16",
+      "5,2"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[pd];W[dp];B[pp];W[dd];\nB[fq];W[cn];B[jp];W[qn])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 19,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[dd];W[pp];B[dp];W[pd];\nB[nq];W[qn];B[jp];W[cn])\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[pp];W[dd];B[pd];W[dp];\nB[fc];W[cf];B[jd];W[qf])\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[dd];W[pp];B[pd];W[dp];\nB[qn];W[nq];B[pj];W[nc])\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]GM[1]KM[7.5]PB[Black]PW[White]SZ[19];B[pp];W[dd];B[dp];W[pd];\nB[cf];W[fc];B[dj];W[fq])\n"
+   }
+  },
+  "collection.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[cg])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  .  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 2,
+   "nodeCount": 2,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[cg])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[gg])\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[cc])\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[gg])\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]GM[1]GN[first]SZ[9];B[cc])\n"
+   }
+  },
+  "comment.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[cg]C[node comment])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  .  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 2,
+   "nodeCount": 2,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    }
+   ],
+   "serialise": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[cg]C[node comment])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[gg]C[node comment])\n",
+    "flip_vertical": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[cc]C[node comment])\n",
+    "rotate_acw": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[gg]C[node comment])\n",
+    "rotate_cw": "(;FF[4]C[a comment with a \\] bracket and a \\\\ backslash]CA[UTF-8]GM[1]SZ[9];\nB[cc]C[node comment])\n"
+   }
+  },
+  "compressed.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]AB[aa:bc][cc]AW[ee:gg]CA[UTF-8]CR[bb:cc]DD[hh:hi]GM[1]LB[aa:Rect]SZ[9]\nTB[ab:ac]TW[ii]VW[de:df];B[ii])\n"
+   },
+   "diagram": "9  #  #  .  .  .  .  .  .  .\n8  #  #  .  .  .  .  .  .  .\n7  #  #  #  .  .  .  .  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  o  o  o  .  .\n4  .  .  .  .  o  o  o  .  .\n3  .  .  .  .  o  o  o  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  #\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 2,
+   "nodeCount": 2,
+   "nodePositions": [
+    {
+     "black": [
+      "6,0",
+      "6,1",
+      "6,2",
+      "7,0",
+      "7,1",
+      "8,0",
+      "8,1"
+     ],
+     "white": [
+      "2,4",
+      "2,5",
+      "2,6",
+      "3,4",
+      "3,5",
+      "3,6",
+      "4,4",
+      "4,5",
+      "4,6"
+     ]
+    },
+    {
+     "black": [
+      "0,8",
+      "6,0",
+      "6,1",
+      "6,2",
+      "7,0",
+      "7,1",
+      "8,0",
+      "8,1"
+     ],
+     "white": [
+      "2,4",
+      "2,5",
+      "2,6",
+      "3,4",
+      "3,5",
+      "3,6",
+      "4,4",
+      "4,5",
+      "4,6"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      0,
+      8
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [
+      "6,0",
+      "6,1",
+      "6,2",
+      "7,0",
+      "7,1",
+      "8,0",
+      "8,1"
+     ],
+     "white": [
+      "2,4",
+      "2,5",
+      "2,6",
+      "3,4",
+      "3,5",
+      "3,6",
+      "4,4",
+      "4,5",
+      "4,6"
+     ]
+    },
+    {
+     "black": [
+      "0,8",
+      "6,0",
+      "6,1",
+      "6,2",
+      "7,0",
+      "7,1",
+      "8,0",
+      "8,1"
+     ],
+     "white": [
+      "2,4",
+      "2,5",
+      "2,6",
+      "3,4",
+      "3,5",
+      "3,6",
+      "4,4",
+      "4,5",
+      "4,6"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]AB[aa:bc][cc]AW[ee:gg]CA[UTF-8]CR[bb:cc]DD[hh:hi]GM[1]LB[aa:Rect]SZ[9]\nTB[ab:ac]TW[ii]VW[de:df];B[ii])\n",
+   "setup": {
+    "black": [
+     "6,0",
+     "6,1",
+     "6,2",
+     "7,0",
+     "7,1",
+     "8,0",
+     "8,1"
+    ],
+    "empty": [],
+    "white": [
+     "2,4",
+     "2,5",
+     "2,6",
+     "3,4",
+     "3,5",
+     "3,6",
+     "4,4",
+     "4,5",
+     "4,6"
+    ]
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]AB[gc][ha][hb][hc][ia][ib][ic]AW[ce][cf][cg][de][df][dg][ee][ef][eg]\nCA[UTF-8]CR[gb][gc][hb][hc]DD[bh][bi]GM[1]LB[ia:Rect]SZ[9]TB[ib][ic]TW[ai]\nVW[fe][ff];B[ai])\n",
+    "flip_vertical": "(;FF[4]AB[ag][ah][ai][bg][bh][bi][cg]AW[ec][ed][ee][fc][fd][fe][gc][gd][ge]\nCA[UTF-8]CR[bg][bh][cg][ch]DD[ha][hb]GM[1]LB[ai:Rect]SZ[9]TB[ag][ah]TW[ia]\nVW[dd][de];B[ia])\n",
+    "rotate_acw": "(;FF[4]AB[ah][ai][bh][bi][cg][ch][ci]AW[ec][ed][ee][fc][fd][fe][gc][gd][ge]\nCA[UTF-8]CR[bg][bh][cg][ch]DD[hb][ib]GM[1]LB[ai:Rect]SZ[9]TB[bi][ci]TW[ia]\nVW[ef][ff];B[ia])\n",
+    "rotate_cw": "(;FF[4]AB[ga][gb][gc][ha][hb][ia][ib]AW[ce][cf][cg][de][df][dg][ee][ef][eg]\nCA[UTF-8]CR[gb][gc][hb][hc]DD[ah][bh]GM[1]LB[ia:Rect]SZ[9]TB[ga][ha]TW[ai]\nVW[dd][ed];B[ai])\n"
+   }
+  },
+  "markup.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]AR[aa:bb]CA[UTF-8]CR[aa][bb]DD[]GM[1]LB[aa:top-left][gg:label]LN[cc:dd]\nMA[cc]SL[ff]SQ[ee]SZ[9]TB[hh]TR[dd]TW[ii]VW[cc];B[ee])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  .  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  #  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  .  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 2,
+   "nodeCount": 2,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "4,4"
+     ],
+     "white": []
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      4,
+      4
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "4,4"
+     ],
+     "white": []
+    }
+   ],
+   "serialise": "(;FF[4]AR[aa:bb]CA[UTF-8]CR[aa][bb]DD[]GM[1]LB[aa:top-left][gg:label]LN[cc:dd]\nMA[cc]SL[ff]SQ[ee]SZ[9]TB[hh]TR[dd]TW[ii]VW[cc];B[ee])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]AR[ia:hb]CA[UTF-8]CR[hb][ia]DD[]GM[1]LB[ia:top-left][cg:label]LN[gc:fd]\nMA[gc]SL[df]SQ[ee]SZ[9]TB[bh]TR[fd]TW[ai]VW[gc];B[ee])\n",
+    "flip_vertical": "(;FF[4]AR[ai:bh]CA[UTF-8]CR[ai][bh]DD[]GM[1]LB[ai:top-left][gc:label]LN[cg:df]\nMA[cg]SL[fd]SQ[ee]SZ[9]TB[hb]TR[df]TW[ia]VW[cg];B[ee])\n",
+    "rotate_acw": "(;FF[4]AR[ai:bh]CA[UTF-8]CR[ai][bh]DD[]GM[1]LB[ai:top-left][gc:label]LN[cg:df]\nMA[cg]SL[fd]SQ[ee]SZ[9]TB[hb]TR[df]TW[ia]VW[cg];B[ee])\n",
+    "rotate_cw": "(;FF[4]AR[ia:hb]CA[UTF-8]CR[hb][ia]DD[]GM[1]LB[ia:top-left][cg:label]LN[gc:fd]\nMA[gc]SL[df]SQ[ee]SZ[9]TB[bh]TR[fd]TW[ai]VW[gc];B[ee])\n"
+   }
+  },
+  "nonstandard.sgf": {
+   "check": {
+    "nodeCount": 2,
+    "properties": [
+     "CM",
+     "MULTIGOGM",
+     "XX",
+     "YY"
+    ]
+   },
+   "clean": {
+    "properties": [
+     "CM",
+     "MULTIGOGM",
+     "XX",
+     "YY"
+    ],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[cg];W[gc])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  o  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 3,
+   "nodeCount": 3,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     "w",
+     [
+      6,
+      6
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]CM[some comment]GM[1]MULTIGOGM[1]PB[Black]SZ[9]XX[custom];B[cg]\nYY[node custom];W[gc])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]CM[some comment]GM[1]MULTIGOGM[1]PB[Black]SZ[9]XX[custom];B[gg]\nYY[node custom];W[cc])\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]CM[some comment]GM[1]MULTIGOGM[1]PB[Black]SZ[9]XX[custom];B[cc]\nYY[node custom];W[gg])\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]CM[some comment]GM[1]MULTIGOGM[1]PB[Black]SZ[9]XX[custom];B[gg]\nYY[node custom];W[cc])\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]CM[some comment]GM[1]MULTIGOGM[1]PB[Black]SZ[9]XX[custom];B[cc]\nYY[node custom];W[gg])\n"
+   }
+  },
+  "pass.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[cg];W[];B[gc];W[tt])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  #  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 5,
+   "nodeCount": 5,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2",
+      "6,6"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2",
+      "6,6"
+     ],
+     "white": []
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     "w",
+     null
+    ],
+    [
+     "b",
+     [
+      6,
+      6
+     ]
+    ],
+    [
+     "w",
+     null
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2",
+      "6,6"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2",
+      "6,6"
+     ],
+     "white": []
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[cg];W[];B[gc];W[tt])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[gg];W[];B[cc];W[])\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[cc];W[];B[gg];W[])\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[gg];W[];B[cc];W[])\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]GM[1]SZ[9];B[cc];W[];B[gg];W[])\n"
+   }
+  },
+  "setup.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]AB[aa][ia]AE[ee]AW[ii][ai]CA[UTF-8]GM[1]HA[2]SZ[9];B[cg];W[gc])\n"
+   },
+   "diagram": "9  #  .  .  .  .  .  .  .  #\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  o  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  .  .  .\n2  .  .  .  .  .  .  .  .  .\n1  o  .  .  .  .  .  .  .  o\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 3,
+   "nodeCount": 3,
+   "nodePositions": [
+    {
+     "black": [
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8",
+      "6,6"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     "w",
+     [
+      6,
+      6
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "8,0",
+      "8,8"
+     ],
+     "white": [
+      "0,0",
+      "0,8",
+      "6,6"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]AB[aa][ia]AE[ee]AW[ii][ai]CA[UTF-8]GM[1]HA[2]SZ[9];B[cg];W[gc])\n",
+   "setup": {
+    "black": [
+     "8,0",
+     "8,8"
+    ],
+    "empty": [
+     "4,4"
+    ],
+    "white": [
+     "0,0",
+     "0,8"
+    ]
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]AB[aa][ia]AE[ee]AW[ai][ii]CA[UTF-8]GM[1]HA[2]SZ[9];B[gg];W[cc])\n",
+    "flip_vertical": "(;FF[4]AB[ai][ii]AE[ee]AW[aa][ia]CA[UTF-8]GM[1]HA[2]SZ[9];B[cc];W[gg])\n",
+    "rotate_acw": "(;FF[4]AB[aa][ai]AE[ee]AW[ia][ii]CA[UTF-8]GM[1]HA[2]SZ[9];B[gg];W[cc])\n",
+    "rotate_cw": "(;FF[4]AB[ia][ii]AE[ee]AW[aa][ai]CA[UTF-8]GM[1]HA[2]SZ[9];B[cc];W[gg])\n"
+   }
+  },
+  "simple.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[cg];W[gc];B[gg])\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  o  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  #  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 4,
+   "nodeCount": 4,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "6,6"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     "w",
+     [
+      6,
+      6
+     ]
+    ],
+    [
+     "b",
+     [
+      2,
+      6
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "6,6"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[cg];W[gc];B[gg])\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[gg];W[cc];B[cg])\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[cc];W[gg];B[gc])\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[gg];W[cc];B[gc])\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]GM[1]KM[6.5]PB[Black]PW[White]SZ[9];B[cc];W[gg];B[cg])\n"
+   }
+  },
+  "variations.sgf": {
+   "check": {
+    "nodeCount": 0,
+    "properties": []
+   },
+   "clean": {
+    "properties": [],
+    "serialise": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[cg](;W[gc];B[gg])(;W[cc];B[gg];W[ee]))\n"
+   },
+   "diagram": "9  .  .  .  .  .  .  .  .  .\n8  .  .  .  .  .  .  .  .  .\n7  .  .  .  .  .  .  o  .  .\n6  .  .  .  .  .  .  .  .  .\n5  .  .  .  .  .  .  .  .  .\n4  .  .  .  .  .  .  .  .  .\n3  .  .  #  .  .  .  #  .  .\n2  .  .  .  .  .  .  .  .  .\n1  .  .  .  .  .  .  .  .  .\n   A  B  C  D  E  F  G  H  J",
+   "mainLineCount": 4,
+   "nodeCount": 7,
+   "nodePositions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "6,6"
+     ]
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,2"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "6,2"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "4,4",
+      "6,2"
+     ]
+    }
+   ],
+   "plays": [
+    [
+     "b",
+     [
+      2,
+      2
+     ]
+    ],
+    [
+     "w",
+     [
+      6,
+      6
+     ]
+    ],
+    [
+     "b",
+     [
+      2,
+      6
+     ]
+    ]
+   ],
+   "positions": [
+    {
+     "black": [],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": []
+    },
+    {
+     "black": [
+      "2,2"
+     ],
+     "white": [
+      "6,6"
+     ]
+    },
+    {
+     "black": [
+      "2,2",
+      "2,6"
+     ],
+     "white": [
+      "6,6"
+     ]
+    }
+   ],
+   "serialise": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[cg](;W[gc];B[gg])(;W[cc];B[gg];W[ee]))\n",
+   "setup": {
+    "black": [],
+    "empty": [],
+    "white": []
+   },
+   "size": 9,
+   "transforms": {
+    "flip_horizontal": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[gg](;W[cc];B[cg])(;W[gc];B[cg];W[ee]))\n",
+    "flip_vertical": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[cc](;W[gg];B[gc])(;W[cg];B[gc];W[ee]))\n",
+    "rotate_acw": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[gg](;W[cc];B[gc])(;W[cg];B[gc];W[ee]))\n",
+    "rotate_cw": "(;FF[4]CA[UTF-8]GM[1]PB[Black]SZ[9];B[cc](;W[gg];B[cg])(;W[gc];B[cg];W[ee]))\n"
+   }
+  }
+ }
+}

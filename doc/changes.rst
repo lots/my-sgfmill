@@ -1,6 +1,26 @@
 Changes
 =======
 
+* Added SGF Toolkit (web), a browser front end for the library in
+  :file:`WebApp/`, carrying the same operations as the desktop application in
+  HTML5, CSS and JavaScript.
+
+  It is plain files: no build step, no package to install, and nothing fetched
+  at run time, so it is deployed by copying the directory to a static web
+  server. That keeps the property the rest of this project guards -- the
+  library itself still has no dependencies, and neither does either front end.
+
+  A static server cannot run Python, so :file:`WebApp/js/` is a port of the
+  library rather than a binding to it. Two implementations of the same rules
+  can drift apart, so the port is checked against the library instead of
+  trusted: :file:`WebApp/tests/generate_expected.py` asks the Python library
+  what each fixture means, and the Node tests compare. That covers the
+  serialised bytes, the position after every move and at every node, the
+  non-standard property report, the cleaned file, all four transformations,
+  and the board diagram character for character. Those tests run from this
+  testsuite too, as :mod:`sgfmill_tests.webapp_tests`, which skips them where
+  Node is not installed.
+
 * Added SGF Toolkit, a Textual application in the :file:`App/` directory which
   puts the library's functions behind a keyboard-driven interface with a
   VS Code style file explorer. It is an optional companion: the library itself

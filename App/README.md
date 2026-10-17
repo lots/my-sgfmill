@@ -7,6 +7,11 @@ inspect and edit `.sgf` files without writing Python.
 It is a *companion* to the library rather than part of it: `sgfmill` itself
 stays dependency-free, and only this app needs Textual.
 
+There is also a browser front end carrying the same operations, in
+[`../WebApp/`](../WebApp/README.md): HTML5, CSS and JavaScript, deployable to a
+static web server. The two share no code — the web app is a JavaScript port of
+the library — so this one is the reference for how the app behaves.
+
 ## Running it
 
 On Windows, `App\run_sgf_toolkit.cmd` is the shortest way in. It uses the

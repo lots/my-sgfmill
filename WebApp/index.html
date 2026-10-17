@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SGF Toolkit (web)</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header id="header">
+  <span id="title">SGF Toolkit</span>
+  <span id="subtitle">a web front end for the sgfmill library</span>
+  <span id="target-summary"></span>
+</header>
+
+<main id="body">
+
+  <section class="pane" id="explorer" style="--pane-width: 240px">
+    <h2 class="pane-title">1&nbsp; Select target</h2>
+    <p class="hint" id="explorer-hint">Drop <code>.sgf</code> files here, or</p>
+    <p><label class="button" for="file-input">Open files…</label>
+       <input type="file" id="file-input" accept=".sgf,application/x-go-sgf"
+              multiple hidden></p>
+    <ul id="files" class="file-list"></ul>
+  </section>
+
+  <div class="resizer" data-pane="explorer" title="Drag to resize"></div>
+
+  <section class="pane" id="actions" style="--pane-width: 260px">
+    <h2 class="pane-title">2&nbsp; Select action</h2>
+    <ul id="operations" class="action-list" role="listbox"
+        aria-label="Actions" tabindex="0"></ul>
+    <div id="params">
+      <label id="param-label" for="param-input"></label>
+      <input id="param-input" type="text" autocomplete="off" spellcheck="false">
+      <div class="buttons">
+        <button id="run" type="button" class="primary">Run</button>
+        <button id="apply-again" type="button">Apply one more</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="resizer" data-pane="actions" title="Drag to resize"></div>
+
+  <section class="pane" id="tree-pane" style="--pane-width: 300px">
+    <h2 class="pane-title">3&nbsp; Game tree</h2>
+    <div id="tree" class="tree" role="tree" tabindex="0">
+      <p class="hint">Choose <em>Show tree</em> to fill this pane.</p>
+    </div>
+  </section>
+
+  <div class="resizer" data-pane="tree" title="Drag to resize"></div>
+
+  <section class="pane" id="results">
+    <div id="target-bar">No file loaded</div>
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="board" aria-selected="true">Board</button>
+      <button role="tab" data-tab="info">Info</button>
+      <button role="tab" data-tab="moves">Moves</button>
+      <button role="tab" data-tab="notes">Notes</button>
+    </nav>
+    <div id="panels">
+      <div class="panel active" id="panel-board">
+        <p class="caption" id="board-caption"></p>
+        <pre id="board-view" class="board"></pre>
+      </div>
+      <div class="panel" id="panel-info"><div id="info-view"></div></div>
+      <div class="panel" id="panel-moves"><div id="moves-view"></div></div>
+      <div class="panel" id="panel-notes">
+        <div id="downloads"></div>
+        <ol id="notes-view" class="log"></ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer id="message-bar">
+  <span id="message">&nbsp;</span>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

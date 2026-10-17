@@ -34,10 +34,9 @@ modules of FF[4].
 
 ## What this fork adds
 
-Beyond the upstream library, this fork carries three extra modules and a
-companion application, all written to the same style as the rest of the
-library. They are the reason this fork exists, and they have not been proposed
-upstream.
+Beyond the upstream library, this fork carries three extra modules and two
+front ends, all written to the same style as the rest of the library. They are
+the reason this fork exists, and they have not been proposed upstream.
 
 | Addition | What it does |
 | --- | --- |
@@ -45,19 +44,23 @@ upstream.
 | `sgf_transform` | Flips or turns a game's board: vertical and horizontal flips, and quarter-turns clockwise and anti-clockwise. |
 | `sgf_encoding` | Works out the character encoding an SGF file's bytes are really in, and converts them to UTF-8. |
 | `App/` | **SGF Toolkit**, a [Textual](https://textual.textualize.io) application that puts the library's functions behind a keyboard-driven interface, with a VS Code style file explorer. |
+| `WebApp/` | **SGF Toolkit (web)**, the same operations in HTML5, CSS and JavaScript, deployable to any static web server by copying the directory. |
 
 Other differences from upstream:
 
 * A pass is now written as the FF[4] empty value (`B[]`) rather than `tt`. The
   older `tt` form is still read as a pass on boards of 19x19 or smaller.
-* `App/run_sgf_toolkit.cmd` starts the companion app on Windows.
+* `App/run_sgf_toolkit.cmd` starts the desktop app on Windows.
 * The testsuite has grown well past 200 tests, and pytest is wired up
   alongside the library's own runner.
 
-The companion app needs Textual; **the library itself still needs nothing**.
-Keeping that property is deliberate.
+The desktop app needs Textual, and the web app is a JavaScript port of the
+library; **the library itself still needs nothing**. Keeping that property is
+deliberate, and it is why the web app has no runtime dependencies either — no
+build step and no CDN.
 
-See `doc/changes.rst` for the details, and `App/README.md` for the app.
+See `doc/changes.rst` for the details, `App/README.md` for the desktop app and
+`WebApp/README.md` for the web app.
 
 ## Requirements
 
@@ -115,6 +118,20 @@ python App/run_sgf_toolkit.py [directory]
 python App/run_sgf_toolkit.py --help
 ```
 
+## Running the web app
+
+It is plain files, so serve the directory over HTTP — a browser will not load
+ES modules from `file://`:
+
+```
+cd WebApp
+python -m http.server 8000          # then open http://localhost:8000/
+node tests/serve.mjs 8000           # or the dependency-free server in the tests
+```
+
+Deploying it is copying `WebApp/` to a static web server: there is no build step
+and nothing to install. See `WebApp/README.md`.
+
 ## Building the documentation
 
 ```
@@ -150,7 +167,8 @@ instead, as upstream does.
 sgfmill/            the library
 sgfmill_tests/      the testsuite
 examples/           example scripts, with a tutorial in README.md
-App/                SGF Toolkit, the Textual companion app, with its own README
+App/                SGF Toolkit, the Textual desktop app, with its own README
+WebApp/             SGF Toolkit (web): HTML5, CSS and JavaScript, with its own README
 doc/                Sphinx documentation sources
 run_sgfmill_testsuite   testsuite entry point (shell script)
 setup.py            packaging
