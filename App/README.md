@@ -186,14 +186,16 @@ Arrow keys and Enter drive the operations list and the file tree.
   Choosing *Turn board 90 clockwise*, *Turn board 90 anticlockwise*, *Flip
   board vertically* or *Flip board horizontally* applies it once to the preview
   on the Board tab, captioned `PREVIEW: ... (n applied, Run saves it)`.
-  Choosing it again — by arrow key, mouse or Enter — does **not** apply it a
-  second time, so one choice is always one flip, and a flip really is a mirror
-  image. **Apply one more** (`Ctrl+A`) is how another application is added on
-  top, so the cycle can be watched closing: **two flips return to the original
-  board, and four quarter-turns do too**. `Escape` resets the preview. Nothing
-  is written until you press **Run**, which saves the board that is on screen —
-  including a full cycle, which is saved as an unchanged position and noted as
-  such in the log.
+  Choosing it again applies it again, so the cycle can be watched closing:
+  **two flips return to the original board, and four quarter-turns do too**.
+  Moving the highlight with the arrow keys only looks — it does not apply
+  anything — and **Apply one more** (`Ctrl+A`) adds an application without
+  moving the selection. `Escape` resets the preview. Nothing is written until
+  you press **Run**, which saves the board that is on screen — including a full
+  cycle, which is saved as an unchanged position and noted as such in the log.
+
+  The turns follow FF[4], so a clockwise turn carries the top-left corner to
+  the **top-right** (`a` becomes `i` on a 19x19 board).
 
   The target is never transformed in place: if the output name is the file you
   opened, the action refuses and says so (use **Save** for that). Pressing

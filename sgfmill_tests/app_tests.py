@@ -183,11 +183,12 @@ def test_transform_writes_file(tc):
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
-                # Select the action, which previews it, then set the output
-                # name and run. (Running with nothing previewed refuses, since
-                # there would be no transformation to save.)
+                # Choose the action (which is what applies it), then set the
+                # output name and run. (Running with nothing applied refuses,
+                # since there would be no transformation to save.)
                 app._set_action(
                     [o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                app._preview_transform("rotate_cw")
                 await pilot.pause()
                 app.query_one("#param-input").value = str(target)
                 app.run_current_operation()
@@ -200,9 +201,10 @@ def test_transform_writes_file(tc):
         _, before_plays = _plays(before)
         _, after_plays = _plays(after)
         tc.assertEqual(before_plays[0], ("b", (2, 2)))
-        # A quarter turn clockwise maps (2, 2) on a 9x9 board to (2, 6).
-        tc.assertEqual(after_plays[0], ("b", (2, 6)))
-        tc.assertEqual(after_plays[1], ("w", (6, 2)))
+        # A quarter turn clockwise on a 9x9 board: (row, col) -> (8-col, row),
+        # so (2, 2) becomes (6, 2) and (6, 6) becomes (2, 6).
+        tc.assertEqual(after_plays[0], ("b", (6, 2)))
+        tc.assertEqual(after_plays[1], ("w", (2, 6)))
 
 def _plays(game):
     from sgfmill import sgf_moves

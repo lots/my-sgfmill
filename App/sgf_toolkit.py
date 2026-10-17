@@ -500,7 +500,7 @@ class SgfToolkitApp(App):
             return False
         return True
 
-    def _set_action(self, index, already_applied=False):
+    def _set_action(self, index):
         if not 0 <= index < len(self.OPERATIONS):
             return
         self.current = self.OPERATIONS[index]
@@ -516,8 +516,10 @@ class SgfToolkitApp(App):
             input_widget.value = self._default_parameter(identifier, default)
         self.query_one(MessageBar).update_message(
             identifier, self.path.name if self.path else None)
-        # Show what a board transformation would do, before it is saved.
-        self._update_preview(identifier, already_applied=already_applied)
+        # Draw what the selected action is about. This does not apply a
+        # transformation: that happens when the action is chosen, so that
+        # choosing it again cycles rather than repeating.
+        self._update_preview(identifier)
 
     def _set_parameter_prompt(self, prompt):
         """Show which target the parameter applies to, and what is wanted."""
@@ -541,38 +543,50 @@ class SgfToolkitApp(App):
         # Suggest a new name; _output_path() avoids collisions.
         return str(source.with_name(source.stem + default + source.suffix))
 
-    def _update_preview(self, identifier, already_applied=False):
+    def _update_preview(self, identifier):
         """Draw the board that the selected action is about.
 
-        Selecting a flip or a turn applies it once, so the effect can be seen
-        before anything is written; selecting it again adds nothing, and
-        'Apply one more' (or Ctrl+A) is how further applications are made, so
-        the transformations compose and a flip twice brings the board back to
-        where it started.
+        For a flip or a turn this draws whatever is already pending; it does
+        not apply anything itself. Applying is the job of _preview_transform,
+        which is called when the action is *chosen* (a click, Enter, or Run).
+        That split is what makes the transformations cycle: choosing a flip
+        again applies it again, so two choices bring the board back to where it
+        started, while highlighting an action with the arrow keys changes
+        nothing.
 
-        Selecting anything else clears the pending transformations and puts the
-        plain final position back, so a stale preview can't be mistaken for the
-        file's contents.
-
-        'already_applied' says the action was just applied as it was selected
-        -- clicking a list entry selects it twice (once as it is highlighted,
-        once when it is chosen), and without this the board would be flipped
-        twice by a single click.
+        Selecting something other than a transformation clears the pending
+        ones and puts the plain final position back, so a stale preview can't
+        be mistaken for the file's contents.
         """
         if self.game is None:
             return
-        # Starting a different action starts from the file's board again, so
-        # pending transformations belong to one action only.
         if identifier != getattr(self, "_preview_action", None):
+            # A different action starts from the file's board again, so pending
+            # transformations belong to one action only.
             self.pending_transforms = []
             self._preview_action = identifier
         if identifier not in self.BOARD_TRANSFORMS:
             self.pending_transforms = []
             self._show_board()
             return
-        if not already_applied:
-            transformation, _words = self.BOARD_TRANSFORMS[identifier]
-            self.pending_transforms.append(transformation)
+        self._show_board(transforms=list(self.pending_transforms))
+
+    def _preview_transform(self, identifier):
+        """Apply one more of a transformation and draw the result.
+
+        Called when the user chooses the action, so each choice is exactly one
+        application: selecting a flip brings the board to the mirror image, and
+        selecting it again brings it back.
+        """
+        if self.game is None or identifier not in self.BOARD_TRANSFORMS:
+            return
+        if identifier != getattr(self, "_preview_action", None):
+            # A different action starts from the file's board again, so pending
+            # transformations belong to one action only.
+            self.pending_transforms = []
+            self._preview_action = identifier
+        transformation, _words = self.BOARD_TRANSFORMS[identifier]
+        self.pending_transforms.append(transformation)
         self._show_board(transforms=list(self.pending_transforms))
 
     def apply_transform_again(self):
@@ -704,12 +718,12 @@ class SgfToolkitApp(App):
 
     @on(ListView.Selected, "#operations")
     def _action_selected(self, event):
-        # Choosing an entry applies a transformation only if highlighting it
-        # hasn't already; otherwise a click, which does both, would apply it
-        # twice.
-        applied = bool(self.pending_transforms)
-        self._set_action(self.query_one("#operations", ListView).index,
-                         already_applied=applied)
+        # Choosing an entry applies one more of the transformation, so choosing
+        # a flip twice brings the board back to where it started. Highlighting
+        # does not apply anything: a click fires both events, and applying on
+        # each of them flipped the board twice.
+        self._set_action(self.query_one("#operations", ListView).index)
+        self._preview_transform(self.current[0])
         if self.current[2] is None:
             self.run_current_operation()
         else:

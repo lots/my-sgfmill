@@ -11,19 +11,27 @@ def make_tests(suite):
 
 
 def test_transform_point(tc):
-    # The documented mapping, on a 9x9 board. SGF 'aa' is A1, the bottom left.
+    # The documented mapping, on a 9x9 board, in sgfmill's (row, col) terms,
+    # where (0, 0) is the bottom left (A1).
     tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.FLIP_VERTICAL, 9), (8, 0))
     tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.FLIP_HORIZONTAL, 9), (0, 8))
-    tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.ROTATE_CW, 9), (0, 8))
-    tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.ROTATE_ACW, 9), (8, 0))
+    # A clockwise turn carries the bottom left corner up the left edge, and
+    # an anticlockwise one carries it along the bottom edge.
+    tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.ROTATE_CW, 9), (8, 0))
+    tc.assertEqual(sgf_transform.transform_point((0, 0), sgf_transform.ROTATE_ACW, 9), (0, 8))
+    # Stated in display terms as well, because that is what a viewer sees: the
+    # top left corner (row 8, col 0) goes to the top right (row 8, col 8) when
+    # the board is turned clockwise.
+    tc.assertEqual(sgf_transform.transform_point((8, 0), sgf_transform.ROTATE_CW, 9), (8, 8))
+    tc.assertEqual(sgf_transform.transform_point((8, 0), sgf_transform.ROTATE_ACW, 9), (0, 0))
     # A pass has no position
     tc.assertIs(sgf_transform.transform_point(None, sgf_transform.ROTATE_CW, 9), None)
     tc.assertRaises(ValueError, sgf_transform.transform_point,
                     (0, 0), "sideways", 9)
 
 def test_single_stone_geometry(tc):
-    # One black stone at A1 (the bottom left). Read back as a vertex name, so
-    # that the test is stated in the same terms a user would see.
+    # One black stone at A9 (the top left). Read back as a vertex name, so that
+    # the test is stated in the same terms a user would see.
     def transformed(transformation):
         sgf_game = sgf.Sgf_game.from_bytes(b"(;FF[4]GM[1]SZ[9]AB[aa])")
         tc.assertEqual(sgf_game.get_root().get("AB"), {(8, 0)})
@@ -31,19 +39,21 @@ def test_single_stone_geometry(tc):
         return format_vertex(sgf_game.get_root().get("AB").pop())
     tc.assertEqual(transformed(sgf_transform.FLIP_VERTICAL), "A1")
     tc.assertEqual(transformed(sgf_transform.FLIP_HORIZONTAL), "J9")
-    tc.assertEqual(transformed(sgf_transform.ROTATE_CW), "A1")
-    tc.assertEqual(transformed(sgf_transform.ROTATE_ACW), "J9")
+    # A clockwise turn carries the top left corner to the top right; an
+    # anticlockwise one carries it to the bottom left.
+    tc.assertEqual(transformed(sgf_transform.ROTATE_CW), "J9")
+    tc.assertEqual(transformed(sgf_transform.ROTATE_ACW), "A1")
 
 def test_corner_cycle(tc):
     # Turning a corner clockwise should walk it round the corners. SGF 'aa' is
-    # the top-left corner, A9; turning clockwise takes it to A1, then J1, J9,
+    # the top-left corner, A9; turning clockwise takes it to J9, then J1, A1,
     # and back to A9.
     sgf_game = sgf.Sgf_game.from_bytes(b"(;FF[4]GM[1]SZ[9]AB[aa])")
     seen = []
     for _ in range(5):
         seen.append(format_vertex(list(sgf_game.get_root().get("AB"))[0]))
         sgf_transform.transform_game(sgf_game, sgf_transform.ROTATE_CW)
-    tc.assertEqual(seen, ["A9", "A1", "J1", "J9", "A9"])
+    tc.assertEqual(seen, ["A9", "J9", "J1", "A1", "A9"])
 
 def test_involutions(tc):
     source = (b"(;FF[4]GM[1]SZ[9]AB[aa][cc][gg]AW[ee]CR[fg]TR[cd]"
@@ -108,13 +118,15 @@ def test_transform_whole_tree(tc):
         b"(;FF[4]GM[1]SZ[9];B[aa](;W[bb]CR[cc])(;W[dd]TR[ee](;B[ff]SQ[gg])))")
     sgf_transform.transform_game(sgf_game, sgf_transform.ROTATE_CW)
     root = sgf_game.get_root()
-    tc.assertEqual(root[0].get_move(), ("b", (0, 0)))
-    tc.assertEqual(root[0][0].get_move(), ("w", (1, 1)))
-    tc.assertEqual(root[0][0].get("CR"), {(2, 2)})
-    tc.assertEqual(root[0][1].get_move(), ("w", (3, 3)))
+    # A clockwise turn on a 9x9 board: (row, col) -> (8-col, row), so the top
+    # left corner ends up at the top right.
+    tc.assertEqual(root[0].get_move(), ("b", (8, 8)))
+    tc.assertEqual(root[0][0].get_move(), ("w", (7, 7)))
+    tc.assertEqual(root[0][0].get("CR"), {(6, 6)})
+    tc.assertEqual(root[0][1].get_move(), ("w", (5, 5)))
     tc.assertEqual(root[0][1].get("TR"), {(4, 4)})
-    tc.assertEqual(root[0][1][0].get_move(), ("b", (5, 5)))
-    tc.assertEqual(root[0][1][0].get("SQ"), {(6, 6)})
+    tc.assertEqual(root[0][1][0].get_move(), ("b", (3, 3)))
+    tc.assertEqual(root[0][1][0].get("SQ"), {(2, 2)})
 
 def test_transform_preserves_other_properties(tc):
     source = (b"(;FF[4]GM[1]CA[UTF-8]SZ[9]PB[Black]PW[White]"
@@ -130,7 +142,8 @@ def test_transform_preserves_other_properties(tc):
     tc.assertEqual(root.get("SZ"), 9)
     tc.assertEqual(root[0].get("N"), "node")
     tc.assertEqual(root[0].get("BL"), 12.5)
-    tc.assertEqual(root[0].get_move(), ("b", (0, 0)))
+    # A clockwise turn: (row, col) -> (8-col, row)
+    tc.assertEqual(root[0].get_move(), ("b", (8, 8)))
 
 def test_transform_rectangular_list_items(tc):
     # AR and LN values are lists of pairs; the pairs themselves must not be

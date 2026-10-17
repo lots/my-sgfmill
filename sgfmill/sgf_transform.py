@@ -25,9 +25,14 @@ Coordinate system
   ================ =========================================
   FLIP_VERTICAL    (size-1-row, col)
   FLIP_HORIZONTAL  (row, size-1-col)
-  ROTATE_CW        (col, size-1-row)
-  ROTATE_ACW       (size-1-col, row)
+  ROTATE_CW        (size-1-col, row)
+  ROTATE_ACW       (col, size-1-row)
   ================ =========================================
+
+  Which way a rotation goes is fixed by FF[4], which says that a point on the
+  first row of the board moves to the last column when the board is turned 90
+  degrees clockwise ('a' becomes 'i' on a 19x19 board). Read in the display
+  orientation, that takes the top-left corner to the top-right.
 
   "Vertical flip" is taken to mean turning the board over about a vertical
   axis, ie swapping the left and right sides (which is the same as a
@@ -60,10 +65,10 @@ def _flip_horizontal(row, col, side):
     return row, side-1-col
 
 def _rotate_cw(row, col, side):
-    return col, side-1-row
+    return side-1-col, row
 
 def _rotate_acw(row, col, side):
-    return side-1-col, row
+    return col, side-1-row
 
 
 #: Flip the board about a vertical axis, swapping left and right.

@@ -52,7 +52,10 @@ def _write_sample(directory, name="sample.sgf", with_junk=False):
     root.set("PB", "Black")
     if with_junk:
         root.set_raw("MULTIGOGM", b"1")
-    game.extend_main_sequence().set_move("b", (2, 2))
+    # (2, 3) is off the main diagonal on purpose: a stone on the diagonal looks
+    # the same under a clockwise turn as under a vertical flip, so the four
+    # transformations would not be distinguishable.
+    game.extend_main_sequence().set_move("b", (2, 3))
     path = Path(directory) / name
     path.write_bytes(game.serialise())
     return path
@@ -193,21 +196,22 @@ def test_transform_actions_preview_the_result(tc):
                 await pilot.pause()
                 original = _text_of(app, "#board-view")
 
-                # Turn the board a quarter-turn clockwise. The black stone is
-                # at (2, 2); clockwise it becomes (2, 6).
-                app._set_action([o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                # Turn the board a quarter-turn clockwise. The sample's black
+                # stone is at (2, 3), D3; clockwise that is column 5 of row 2,
+                # which is C6.
+                _choose(app, [o[0] for o in app.OPERATIONS].index("rotate_cw"))
                 await pilot.pause()
                 preview = _text_of(app, "#board-view")
                 tc.assertNotEqual(preview, original)
                 tc.assertIn("PREVIEW", preview)
                 tc.assertIn("clockwise", preview)
-                # The preview must actually be the transformed position: the
-                # stone moves from C3 to G3.
-                tc.assertIn("3  .  .  .  .  .  .  #  .  .", preview)
+                # Row index 5 shows as row 6 (the 9x9 diagram is numbered down
+                # from 9), at column C.
+                tc.assertIn("6  .  .  #  .  .  .  .  .  .", preview)
                 # Nothing has been written yet, and the game is unchanged.
                 tc.assertFalse(list(Path(tmp).glob("*-rotate_cw.sgf")))
                 _, plays = _plays(app.game)
-                tc.assertEqual(plays[0], ("b", (2, 2)))
+                tc.assertEqual(plays[0], ("b", (2, 3)))
 
                 # An action that is not a transformation shows the plain board.
                 app._set_action([o[0] for o in app.OPERATIONS].index("info"))
@@ -230,13 +234,15 @@ def test_every_transform_has_a_preview(tc):
                 for identifier in ("rotate_cw", "rotate_acw", "flip_v",
                                    "flip_h"):
                     index = [o[0] for o in app.OPERATIONS].index(identifier)
-                    app._set_action(index)
+                    _choose(app, index)
                     await pilot.pause()
                     shown = _text_of(app, "#board-view")
                     tc.assertIn("PREVIEW", shown,
                                 "%s did not preview" % identifier)
                     boards[identifier] = shown
-                # Four different transformations of one position.
+                # Four different transformations of one position. (The stone is
+                # on the main diagonal, which is why clockwise and anticlockwise
+                # still differ from each other and from the flips.)
                 tc.assertEqual(len(set(boards.values())), 4)
         _run(scenario())
 
@@ -252,16 +258,18 @@ def test_run_saves_the_transformed_board(tc):
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
-                app._set_action([o[0] for o in app.OPERATIONS].index("rotate_cw"))
+                _choose(app, [o[0] for o in app.OPERATIONS].index("rotate_cw"))
                 await pilot.pause()
                 target = Path(app.query_one("#param-input").value)
                 app.run_current_operation()
                 await pilot.pause()
                 tc.assertTrue(target.exists())
-                # The saved file holds the transformed position.
+                # The saved file holds the transformed position: the stone
+                # starts at (2, 3), and a quarter turn clockwise takes it to
+                # (5, 2).
                 saved = sgf.Sgf_game.from_bytes(target.read_bytes())
                 _, plays = _plays(saved)
-                tc.assertEqual(plays[0], ("b", (2, 6)))
+                tc.assertEqual(plays[0], ("b", (5, 2)))
                 # ...and the target is untouched.
                 tc.assertEqual(path.read_bytes(), original_bytes)
 
@@ -376,9 +384,9 @@ def test_selecting_a_flip_applies_it_once(tc):
     """A flip must be applied once per choice, however it is chosen.
 
     Choosing an entry fires two events -- the entry is highlighted, then
-    selected -- and Run is a third. Applying the transformation on each of them
-    flipped the board twice, so a "flip" was a no-op whose preview showed the
-    original position.
+    selected -- so applying the transformation on both flipped the board twice
+    and a "flip" was a no-op. Applying on the choice alone makes each choice
+    exactly one flip, and choosing again flips back.
     """
     with scratch_dir() as tmp:
         path = _write_sample(tmp)
@@ -395,51 +403,74 @@ def test_selecting_a_flip_applies_it_once(tc):
                 list_view.focus()
                 await pilot.pause()
 
-                # (a) arrow onto the entry: one application, and the board
-                #     really is the mirrored one.
+                # (a) arrow onto the entry: that only looks, it applies nothing.
                 while _highlighted_index(list_view) != index:
                     await pilot.press("down")
                     await pilot.pause()
                 await pilot.pause()
-                tc.assertEqual(len(app.pending_transforms), 1,
-                               "highlighting applied it %d times"
-                               % len(app.pending_transforms))
-                tc.assertNotEqual(_position_of(app), original)
+                tc.assertEqual(app.pending_transforms, [],
+                               "moving the highlight applied a flip")
 
-                # (b) press Enter on it: still one application. (Enter moves to
-                #     the parameter box, because a transformation has an output
-                #     file name to confirm, so it must not apply it again.)
-                await pilot.press("enter")
-                await pilot.pause()
-                tc.assertEqual(len(app.pending_transforms), 1,
-                               "Enter applied it twice")
-                tc.assertIn("1 applied", _text_of(app, "#board-view"))
-                tc.assertIn("vertical flip",
-                            _text_of(app, "#board-view").splitlines()[0])
-
-                # (c) running it writes the mirrored board and clears the
-                #     preview, so the next action starts from the file again.
-                target = Path(app.query_one("#param-input").value)
-                app.run_current_operation()
-                await pilot.pause()
-                tc.assertEqual(app.pending_transforms, [])
-                tc.assertTrue(target.exists())
-                _, saved = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
-                tc.assertEqual(saved[0], ("b", (6, 2)),
-                               "the saved board is not a single mirror image")
-
-                # (d) selecting a different action and choosing this one by
-                #     mouse also applies exactly once.
-                app._set_action(0)
-                await pilot.pause()
+                # (b) choose it by mouse: exactly one application.
                 await pilot.click(list_view.children[index])
-                await pilot.pause()
                 await pilot.pause()
                 tc.assertEqual(len(app.pending_transforms), 1,
                                "a mouse click applied it %d times"
                                % len(app.pending_transforms))
+                mirrored = _position_of(app)
+                tc.assertNotEqual(mirrored, original)
                 tc.assertIn("vertical flip",
                             _text_of(app, "#board-view").splitlines()[0])
+
+                # (c) choose it again: a second application, back to the
+                #     original board. This is what makes a flip a flip.
+                await pilot.click(list_view.children[index])
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 2,
+                               "the second click did not apply it again")
+                tc.assertEqual(_position_of(app), original,
+                               "two flips did not return to the original")
+
+                # (d) running it saves what is on screen -- which is now the
+                #     original board, and the log says so.
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertEqual(app.pending_transforms, [])
+        _run(scenario())
+
+def test_choosing_a_flip_twice_returns_to_the_original(tc):
+    """Two choices of a flip cancel out, and that is what gets saved."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                _, before = _plays(app.game)
+                original = _position_of(app)
+                index = [o[0] for o in app.OPERATIONS].index("flip_v")
+                tc.assertEqual(len(app.pending_transforms), 0)
+                _choose(app, index)
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 1)
+                tc.assertNotEqual(_position_of(app), original)
+                _choose(app, index)
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 2)
+                tc.assertEqual(_position_of(app), original,
+                               "two flips did not return to the original")
+                # Saving that writes the file's own position, and says so.
+                target = Path(app.query_one("#param-input").value)
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertTrue(target.exists())
+                _, saved = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
+                tc.assertEqual(saved, before,
+                               "two flips should save the original position")
+                tc.assertIn("unchanged", _text_of(app, "#notes-view"))
         _run(scenario())
 
 def test_a_saved_flip_is_mirrored_once(tc):
@@ -453,10 +484,10 @@ def test_a_saved_flip_is_mirrored_once(tc):
                 await pilot.pause()
                 app.load_file(path)
                 await pilot.pause()
-                # The sample's black stone is at (2, 2) on a 9x9 board;
-                # mirrored vertically it becomes (6, 2).
+                # The sample's black stone is at (2, 3) on a 9x9 board;
+                # mirrored vertically it becomes (6, 3).
                 _, plays = _plays(app.game)
-                tc.assertEqual(plays[0], ("b", (2, 2)))
+                tc.assertEqual(plays[0], ("b", (2, 3)))
 
                 index = [o[0] for o in app.OPERATIONS].index("flip_v")
                 list_view = app.query_one("#operations")
@@ -466,14 +497,15 @@ def test_a_saved_flip_is_mirrored_once(tc):
                     await pilot.press("down")
                     await pilot.pause()
                 await pilot.pause()
-                await pilot.press("enter")
+                # Choosing it by mouse applies one flip.
+                await pilot.click(list_view.children[index])
                 await pilot.pause()
                 target = Path(app.query_one("#param-input").value)
                 app.run_current_operation()
                 await pilot.pause()
                 tc.assertTrue(target.exists())
                 _, saved = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
-                tc.assertEqual(saved[0], ("b", (6, 2)),
+                tc.assertEqual(saved[0], ("b", (6, 3)),
                                "the saved board is not a single mirror image")
         _run(scenario())
 
@@ -510,6 +542,11 @@ def test_transform_output_names_say_what_they_do(tc):
                                    "%s suggested %s" % (identifier, suggested))
         _run(scenario())
 
+
+def _choose(app, index):
+    """Choose an action the way a user does: this is what applies a flip."""
+    app._set_action(index)
+    app._preview_transform(app.current[0])
 
 def _position_of(app):
     """The board diagram currently shown, without the caption line."""
@@ -783,7 +820,7 @@ def test_transformations_compose_into_a_cycle(tc):
                 for identifier, times in (("flip_v", 2), ("flip_h", 2),
                                           ("rotate_cw", 4), ("rotate_acw", 4)):
                     # Selecting the action applies it once...
-                    app._set_action(index[identifier])
+                    _choose(app, index[identifier])
                     await pilot.pause()
                     tc.assertEqual(len(app.pending_transforms), 1)
                     tc.assertNotEqual(_position_of(app), original,
@@ -817,7 +854,7 @@ def test_partial_transformations_are_not_the_identity(tc):
                 original = _position_of(app)
                 for identifier, times in (("flip_v", 1), ("flip_h", 1),
                                           ("rotate_acw", 1)):
-                    app._set_action(index[identifier])
+                    _choose(app, index[identifier])
                     await pilot.pause()
                     for _ in range(times - 1):
                         app.apply_transform_again()
@@ -826,7 +863,7 @@ def test_partial_transformations_are_not_the_identity(tc):
                                       "%s x %d should not be the identity"
                                       % (identifier, times))
                 # Three quarter-turns are also not the identity.
-                app._set_action(index["rotate_cw"])
+                _choose(app, index["rotate_cw"])
                 await pilot.pause()
                 app.apply_transform_again()
                 app.apply_transform_again()
@@ -849,8 +886,8 @@ def test_run_saves_the_composed_result(tc):
                 await pilot.pause()
                 index = {o[0]: i for i, o in enumerate(app.OPERATIONS)}
 
-                # Two clockwise turns = a half turn: (2, 2) becomes (6, 6).
-                app._set_action(index["rotate_cw"])
+                # Two clockwise turns = a half turn: (2, 3) becomes (6, 5).
+                _choose(app, index["rotate_cw"])
                 await pilot.pause()
                 app.apply_transform_again()
                 await pilot.pause()
@@ -858,7 +895,7 @@ def test_run_saves_the_composed_result(tc):
                 app.run_current_operation()
                 await pilot.pause()
                 _, plays = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
-                tc.assertEqual(plays[0], ("b", (6, 6)))
+                tc.assertEqual(plays[0], ("b", (6, 5)))
                 # Saving clears the preview, so the next action starts fresh.
                 tc.assertEqual(app.pending_transforms, [])
 
@@ -866,7 +903,7 @@ def test_run_saves_the_composed_result(tc):
                 # first output is removed first, so this save lands on the
                 # suggested name rather than a collision-avoiding one.
                 target.unlink()
-                app._set_action(index["rotate_cw"])
+                _choose(app, index["rotate_cw"])
                 await pilot.pause()
                 for _ in range(3):
                     app.apply_transform_again()
@@ -878,7 +915,7 @@ def test_run_saves_the_composed_result(tc):
                 await pilot.pause()
                 _, plays2 = _plays(
                     sgf.Sgf_game.from_bytes(target2.read_bytes()))
-                tc.assertEqual(plays2[0], ("b", (2, 2)))
+                tc.assertEqual(plays2[0], ("b", (2, 3)))
                 tc.assertIn("full cycle", _text_of(app, "#notes-view"))
         _run(scenario())
 
