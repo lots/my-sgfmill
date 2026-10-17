@@ -105,6 +105,15 @@ body.dragging { cursor: col-resize; user-select: none; }
 .hint { color: var(--dim); font-size: 12px; padding: 0 10px; }
 #explorer-hint { margin: 8px 0 4px; }
 #explorer p { padding: 0 10px; }
+#explorer-status {
+  padding: 6px 10px 8px;
+  min-height: 2.2em;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12px;
+}
+#explorer-status.bad { color: var(--error); }
+#explorer-status.warn { color: var(--preview); }
 
 .button {
   display: inline-block;
@@ -117,6 +126,50 @@ body.dragging { cursor: col-resize; user-select: none; }
   font-size: 13px;
 }
 .button:hover { border-color: var(--accent); }
+
+/*
+ * The file input stays in the page but out of sight, rather than using
+ * display:none: a label opens the picker more reliably when its control is
+ * rendered, and keeping it means the input is still reachable by keyboard.
+ */
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Shown only when the app could not start; see the watchdog in index.html. */
+#boot-error {
+  grid-row: 1 / -1;
+  margin: 0;
+  padding: 16px 22px;
+  background: #3a1f22;
+  border-bottom: 2px solid var(--error);
+  overflow: auto;
+}
+#boot-error h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--error);
+}
+#boot-error p { margin: 6px 0; max-width: 70ch; }
+#boot-error pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 12px;
+  max-width: 70ch;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+}
 
 .file-list {
   list-style: none;

@@ -36,6 +36,7 @@ globalThis.HTMLInputElement = dom.window.HTMLInputElement;
 globalThis.KeyboardEvent = dom.window.KeyboardEvent;
 globalThis.Blob = dom.window.Blob;
 globalThis.URL = dom.window.URL;
+globalThis.FileReader = dom.window.FileReader;
 
 const app = await import("../js/app.js");
 const ui = dom.window.sgfToolkit;
@@ -89,6 +90,51 @@ equal("board tab is showing", $("#panel-board").classList.contains("active"), tr
 
 // -- loading a file --------------------------------------------------------
 
+// First through the real file input, which is how a user opens a file. The
+// other tests use the hook, so this path needs its own cover: it is where a
+// FileList can be emptied out from under the loader.
+const input = $("#file-input");
+Object.defineProperty(input, "files", {
+  value: [new dom.window.File([fixture("simple.sgf")], "simple.sgf")],
+  configurable: true,
+});
+input.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+await new Promise((resolve) => setTimeout(resolve, 60));   // the loader awaits
+
+equal("the file input loaded a file", ui.state.files.length, 1);
+equal("and it is the one chosen", ui.state.files[0].name, "simple.sgf");
+equal("a file chosen becomes the target", ui.state.current?.name, "simple.sgf");
+contains("the board is drawn from it", text("#board-view"), "#");
+equal("the input is cleared so the same file can be chosen again",
+      input.value, "");
+
+// Two files at once, again through the input.
+Object.defineProperty(input, "files", {
+  value: [
+    new dom.window.File([fixture("setup.sgf")], "setup.sgf"),
+    new dom.window.File([fixture("pass.sgf")], "pass.sgf"),
+  ],
+  configurable: true,
+});
+input.dispatchEvent(new dom.window.Event("change", { bubbles: true }));
+await new Promise((resolve) => setTimeout(resolve, 60));
+equal("both files were loaded", ui.state.files.length, 3);
+equal("the last one becomes the target", ui.state.current.name, "pass.sgf");
+
+// The banner shown when the app cannot start must be gone.
+equal("the could-not-start banner is hidden", $("#boot-error").hidden, true);
+
+// A file that cannot be read must say so where the user is looking, not only
+// in the Notes tab.
+ui.loadBytes("broken.sgf", new Uint8Array([40, 59, 66, 91]));   // "(;B["
+contains("an unreadable file is reported in the explorer",
+         text("#explorer-status"), "broken.sgf");
+check("and the explorer marks it as an error",
+      $("#explorer-status").classList.contains("bad"));
+contains("the file is still listed", text("#files"), "broken.sgf");
+
+// Back to a clean slate for the checks that use the hook.
+ui.state.files.length = 0;
 ui.loadBytes("simple.sgf", fixture("simple.sgf"));
 const record = ui.state.current;
 equal("the file loaded without error", record.error, null);
@@ -240,7 +286,10 @@ contains("and keeps the name suggestion", converted.name, "enc-mismatch-utf8.sgf
 // -- the notes log ---------------------------------------------------------
 
 check("the log recorded what happened", $$("#notes-view li").length > 5);
-equal("no failures were logged", $$("#notes-view li.error").length, 0);
+// The only failure logged should be the deliberately broken file above.
+const errorNotes = $$("#notes-view li.error").map((node) => node.textContent);
+equal("only the broken file was logged as an error", errorNotes.length, 1);
+contains("and it says which file", errorNotes.join(" "), "broken.sgf");
 
 // -- report ----------------------------------------------------------------
 

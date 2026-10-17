@@ -8,6 +8,31 @@
 </head>
 <body>
 
+<div id="boot-error" hidden>
+  <h2>The app could not start</h2>
+  <p id="boot-error-detail"></p>
+  <p>
+    This page has to be served over HTTP. Opening <code>index.html</code>
+    straight from disk cannot work: browsers refuse to load JavaScript modules
+    from <code>file://</code> URLs. Serve the directory instead —
+  </p>
+<pre><code>cd WebApp
+python -m http.server 8000
+# then open http://localhost:8000/</code></pre>
+  <p>
+    If it <em>is</em> being served, check that <code>.js</code> files are served
+    as <code>text/javascript</code>, and that the browser console shows no
+    error.
+  </p>
+</div>
+
+<noscript>
+  <div id="boot-error">
+    <h2>JavaScript is turned off</h2>
+    <p>This app is written in JavaScript, so it cannot run without it.</p>
+  </div>
+</noscript>
+
 <header id="header">
   <span id="title">SGF Toolkit</span>
   <span id="subtitle">a web front end for the sgfmill library</span>
@@ -19,10 +44,11 @@
   <section class="pane" id="explorer" style="--pane-width: 240px">
     <h2 class="pane-title">1&nbsp; Select target</h2>
     <p class="hint" id="explorer-hint">Drop <code>.sgf</code> files here, or</p>
-    <p><label class="button" for="file-input">Open files…</label>
-       <input type="file" id="file-input" accept=".sgf,application/x-go-sgf"
-              multiple hidden></p>
+    <p><label class="button" for="file-input">Open .sgf files…</label>
+       <input type="file" id="file-input" class="file-input"
+              accept=".sgf,.SGF,application/x-go-sgf" multiple></p>
     <ul id="files" class="file-list"></ul>
+    <p id="explorer-status" class="hint" role="status"></p>
   </section>
 
   <div class="resizer" data-pane="explorer" title="Drag to resize"></div>
@@ -80,6 +106,41 @@
   <span id="message">&nbsp;</span>
 </footer>
 
+<script>
+  /*
+   * Watchdog.
+   *
+   * If js/app.js never runs -- because the page was opened from a file:// URL,
+   * or a server sent .js as text/plain, or something threw during start-up --
+   * the page would still look presentable but do nothing at all, which is
+   * exactly what "no file can be opened" looks like. Catch that and say why.
+   */
+  (function () {
+    var box = document.getElementById("boot-error");
+    var detail = document.getElementById("boot-error-detail");
+    function report(message) {
+      if (window.sgfToolkit) return;          // it started; nothing to report
+      detail.textContent = message;
+      box.hidden = false;
+    }
+    // Resource errors (a module that will not load) do not bubble, so the
+    // listener has to be in the capture phase.
+    window.addEventListener("error", function (event) {
+      var source = event.target;
+      if (source && source !== window && source.tagName) {
+        report("Could not load " + (source.src || source.tagName) + ".");
+      } else {
+        report("A script error stopped the app: " +
+               (event.message || "unknown error"));
+      }
+    }, true);
+    window.addEventListener("DOMContentLoaded", function () {
+      setTimeout(function () {
+        report("The app's JavaScript did not load.");
+      }, 400);
+    });
+  })();
+</script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

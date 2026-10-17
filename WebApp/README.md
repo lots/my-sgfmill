@@ -129,6 +129,32 @@ Both test scripts also run from the library's own testsuite, as
 * The paths, the shell launcher and the `SGF_TOOLKIT_*` environment variables of
   the desktop app have no meaning here.
 
+## Troubleshooting
+
+**"Nothing happens when I choose a file."** The app's JavaScript did not load.
+Almost always this is the page being opened as a file rather than served: a
+`file://` URL cannot load ES modules, so the page appears but nothing is wired
+up. The page now says so — a red banner explains it — so check for that first.
+
+```bash
+cd WebApp
+python -m http.server 8000     # then open http://localhost:8000/
+```
+
+Other causes, in order of likelihood:
+
+* **The server sends `.js` as the wrong content type.** Browsers refuse to run
+  a module served as `text/plain`. It must be `text/javascript` (or
+  `application/javascript`). The banner reports a load failure; the browser
+  console names the file.
+* **The directory was only partly copied.** `index.html` needs the `js/` and
+  `styles.css` beside it, with the paths unchanged.
+* **A file is listed but marked unreadable.** The reason appears under the file
+  list and in the Notes tab; the file itself is not valid SGF.
+
+The banner and the line under the file list exist because a silent failure
+looks exactly like a broken interface: the page renders, and nothing responds.
+
 ## Limitations worth knowing
 
 * Board sizes up to 26×26, as the library supports. Compressed point lists

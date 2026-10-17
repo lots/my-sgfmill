@@ -176,9 +176,48 @@ function leafName(name) {
 
 // -- loading files ---------------------------------------------------------
 
-async function loadFiles(fileList) {
-  for (const file of fileList) {
-    const bytes = new Uint8Array(await file.arrayBuffer());
+/**
+ * Read a File's bytes.
+ *
+ * Blob.arrayBuffer() is the modern way, but it is comparatively recent (and
+ * some environments, including the DOM implementation the tests use, have
+ * FileReader without it), so fall back to FileReader.
+ */
+function readFileBytes(file) {
+  if (typeof file.arrayBuffer === "function") {
+    return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result));
+    reader.onerror = () => reject(reader.error ||
+                                  new Error("the file could not be read"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Load files into the explorer.
+ *
+ * Takes an iterable of File objects. They are copied into a plain array before
+ * anything is awaited, because the FileList a file input hands out can be
+ * emptied by clearing the input (which the change handler does), and reading
+ * it while it is being emptied can quietly yield nothing at all.
+ */
+async function loadFiles(files) {
+  const list = Array.from(files || []);
+  if (list.length === 0) {
+    note("No file was chosen.", "warn");
+    return;
+  }
+  for (const file of list) {
+    let bytes;
+    try {
+      bytes = await readFileBytes(file);
+    } catch (error) {
+      note(`Could not read ${file.name}: ${error.message}`, "error");
+      continue;
+    }
     loadOne(file.name, bytes);
   }
   renderFileList();
@@ -759,11 +798,21 @@ function download(name, text) {
 function note(message, kind = "") {
   state.notes.push({ message, kind });
   const list = $("#notes-view");
-  if (!list) return;
-  const item = element("li", { text: message });
-  if (kind) item.classList.add(kind);
-  list.append(item);
-  list.scrollTop = list.scrollHeight;
+  if (list) {
+    const item = element("li", { text: message });
+    if (kind) item.classList.add(kind);
+    list.append(item);
+    list.scrollTop = list.scrollHeight;
+  }
+  // Also show it in the explorer, which is where a file that will not open
+  // gets noticed: a message only in the Notes tab is easy to miss, and a file
+  // that silently does nothing looks like a broken interface.
+  const status = $("#explorer-status");
+  if (status) {
+    status.textContent = message;
+    status.className = "hint" + (kind === "error" ? " bad"
+      : kind === "warn" ? " warn" : "");
+  }
 }
 
 function showTab(name) {
@@ -826,8 +875,11 @@ function setUpResizers() {
 
 function bindEvents() {
   $("#file-input").addEventListener("change", (event) => {
-    loadFiles(event.target.files);
+    // Copy the files out first: clearing the input (so the same file can be
+    // chosen again) replaces its FileList.
+    const files = Array.from(event.target.files || []);
     event.target.value = "";
+    loadFiles(files);
   });
 
   const explorer = $("#explorer");
@@ -845,7 +897,7 @@ function bindEvents() {
   }
   explorer.addEventListener("drop", (event) => {
     if (event.dataTransfer && event.dataTransfer.files) {
-      loadFiles(event.dataTransfer.files);
+      loadFiles(Array.from(event.dataTransfer.files));
     }
   });
 
@@ -917,6 +969,7 @@ function start() {
  */
 function exposeTestHook() {
   if (typeof window === "undefined") return;
+  // The watchdog in index.html shows an explanation if this never appears.
   window.sgfToolkit = {
     state,
     operations: OPERATIONS,
@@ -935,6 +988,9 @@ function exposeTestHook() {
     // The text of every file written so far, newest last.
     downloads: () => state.downloads,
   };
+  // It started, so take down the "could not start" banner if it appeared.
+  const banner = document.getElementById("boot-error");
+  if (banner) banner.hidden = true;
 }
 
 start();
