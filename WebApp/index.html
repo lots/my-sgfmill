@@ -81,7 +81,12 @@ python -m http.server 8000
 
   <section class="pane" id="tree-pane" style="--pane-width: 300px">
     <h2 class="pane-title">3&nbsp; Game tree</h2>
-    <div id="tree" class="tree" role="tree" tabindex="0">
+    <div id="tree-tools" class="tree-tools" hidden>
+      <button type="button" id="tree-fold-all">Fold all</button>
+      <button type="button" id="tree-unfold-all">Unfold all</button>
+    </div>
+    <div id="tree" class="tree" role="tree" tabindex="-1"
+         aria-label="Game tree">
       <p class="hint">Choose <em>Show tree</em> to fill this pane.</p>
     </div>
   </section>

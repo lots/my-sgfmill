@@ -565,32 +565,143 @@ function showBoardAtMove() {
   });
 }
 
+/**
+ * Show the game as a tree.
+ *
+ * A node with variations gets a triangle: ▼ when its branches are showing and
+ * ▶ when they are hidden, so it is visible at a glance which nodes can be
+ * expanded. Clicking the triangle folds that branch; clicking the rest of the
+ * row shows that node's position. The rows are built nested, so folding
+ * something hides everything beneath it.
+ *
+ * The arrow keys walk the visible rows, Right expands, Left folds (and then
+ * moves to the parent), and Enter shows the position.
+ */
 function showTree() {
   const record = state.current;
   const container = $("#tree");
   container.replaceChildren();
-  const side = record.game.getSize();
 
-  const addNode = (node, depth, parentElement) => {
+  const side = record.game.getSize();
+  const rows = [];                       // {node, row, label} in display order
+  const rowFor = new Map();              // node -> row element
+
+  const build = (node, depth, parent) => {
+    const label = nodeLabel(node, side);
+    const isMove = /^[BW] /.test(label);
     const row = element("div", {
-      className: "node" + (nodeLabel(node, side).startsWith("B ") ||
-                          nodeLabel(node, side).startsWith("W ") ? "" : " setup"),
-      attrs: { role: "treeitem" },
+      className: "node" + (isMove ? "" : " setup"),
+      attrs: { role: "treeitem", tabindex: "-1" },
     });
-    row.append(element("span", { className: "guide",
-                                text: "  ".repeat(depth) + (depth ? "└ " : "") }));
-    row.append(element("span", { className: "label", text: nodeLabel(node, side) }));
-    row.dataset.index = String(nodeIndex.get(node));
-    row.addEventListener("click", () => selectTreeNode(node, row));
-    parentElement.append(row);
-    for (const child of node.children) addNode(child, depth + 1, parentElement);
+    row.style.paddingLeft = `${8 + depth * 14}px`;
+    rowFor.set(node, row);
+
+    const hasChildren = node.children.length > 0;
+    const isVariation = node.children.length > 1;
+    const toggle = element("span", {
+      className: "toggle" + (hasChildren ? "" : " leaf") +
+                 (isVariation ? " variation" : ""),
+      text: hasChildren ? "▼" : "",
+      attrs: hasChildren
+        ? { role: "button", title: "Fold this branch", "aria-label": "fold" }
+        : { "aria-hidden": "true" },
+    });
+    row.append(toggle,
+               element("span", { className: "label", text: label }));
+    rows.push({ node, row, label });
+    parent.append(row);
+
+    if (!hasChildren) return;
+
+    const branch = element("div", { className: "branch" });
+    parent.append(branch);
+    for (const child of node.children) build(child, depth + 1, branch);
+
+    const setExpanded = (expanded) => {
+      branch.hidden = !expanded;
+      toggle.textContent = expanded ? "▼" : "▶";
+      toggle.title = expanded ? "Fold this branch" : "Unfold this branch";
+      toggle.setAttribute("aria-label", expanded ? "fold" : "unfold");
+      row.setAttribute("aria-expanded", String(expanded));
+    };
+    row.expand = () => setExpanded(true);
+    row.collapse = () => setExpanded(false);
+    row.isExpanded = () => !branch.hidden;
+
+    toggle.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setExpanded(branch.hidden);
+    });
+    row.addEventListener("click", () => {
+      focusRow(row);
+      selectTreeNode(node, row);
+    });
+    setExpanded(true);
   };
 
-  const nodes = treeNodes(record.game.getRoot());
-  const nodeIndex = new Map(nodes.map((node, index) => [node, index]));
-  addNode(record.game.getRoot(), 0, container);
-  note(`Tree: ${nodes.length} nodes. Click a move to see its position.`, "ok");
+  build(record.game.getRoot(), 0, container);
+
+  const visible = () => rows.filter(({ row }) => isVisible(row));
+  const move = (from, step) => {
+    const list = visible();
+    const index = list.findIndex(({ row }) => row === from);
+    const next = list[Math.max(0, Math.min(list.length - 1, index + step))];
+    if (next) focusRow(next.row);
+  };
+
+  container.onkeydown = (event) => {
+    const row = event.target.closest?.(".node");
+    if (!row) return;
+    const node = rows.find((entry) => entry.row === row)?.node;
+    if (event.key === "ArrowDown") { event.preventDefault(); move(row, 1); }
+    else if (event.key === "ArrowUp") { event.preventDefault(); move(row, -1); }
+    else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      if (row.expand) {
+        row.expand();
+        row.focus();
+      }
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      if (row.isExpanded && row.isExpanded()) row.collapse();
+      else if (node?.parent && rowFor.has(node.parent)) {
+        focusRow(rowFor.get(node.parent));
+      }
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      selectTreeNode(node, row);
+    }
+  };
+
+  const foldable = rows.filter(({ row }) => row.expand).length;
+  $("#tree-tools").hidden = foldable === 0;
+  note(`Tree: ${rows.length} nodes, ${foldable} with branches. ` +
+       `Click a triangle to fold a branch, or a move to see its position.`, "ok");
   showTab("board");
+}
+
+/** Is a row on screen (nothing above it folded)? */
+function isVisible(row) {
+  for (let node = row; node; node = node.parentElement) {
+    if (node.hidden) return false;
+  }
+  return true;
+}
+
+function focusRow(row) {
+  for (const other of $("#tree").querySelectorAll(".node")) {
+    other.tabIndex = other === row ? 0 : -1;
+    other.classList.toggle("focused", other === row);
+  }
+  row.focus?.();
+}
+
+/** Fold or unfold every branch at once. */
+function setAllBranches(expanded) {
+  for (const row of $("#tree").querySelectorAll(".node")) {
+    if (!row.expand) continue;
+    if (expanded) row.expand(); else row.collapse();
+  }
 }
 
 function nodeLabel(node, side) {
@@ -609,7 +720,9 @@ function nodeLabel(node, side) {
 }
 
 function selectTreeNode(node, row) {
-  for (const other of $("#tree").children) {
+  if (!node) return;
+  // Only the rows are selectable; the branch containers that nest them are not.
+  for (const other of $("#tree").querySelectorAll(".node")) {
     other.setAttribute("aria-selected", other === row ? "true" : "false");
   }
   const side = state.current.game.getSize();
@@ -903,6 +1016,8 @@ function bindEvents() {
 
   $("#run").addEventListener("click", runOperation);
   $("#apply-again").addEventListener("click", applyAgain);
+  $("#tree-fold-all").addEventListener("click", () => setAllBranches(false));
+  $("#tree-unfold-all").addEventListener("click", () => setAllBranches(true));
   $("#param-input").addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();

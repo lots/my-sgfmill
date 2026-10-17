@@ -268,12 +268,39 @@ button:disabled { opacity: 0.45; cursor: default; }
   padding: 2px 10px 2px 0;
   cursor: pointer;
   white-space: nowrap;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
 }
 .tree .node:hover { background: var(--panel-alt); }
 .tree .node[aria-selected="true"] { background: #2c4a7c; }
-.tree .node .guide { color: #4a5160; }
+.tree .node.focused { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* The triangle that folds a branch. A node with several variations is where
+   the game actually branches, so its arrow is picked out; a node that merely
+   continues the line has a dim one; a leaf keeps the space so labels align. */
+.tree .toggle {
+  flex: 0 0 1em;
+  text-align: center;
+  color: #4a5160;
+  cursor: pointer;
+  user-select: none;
+}
+.tree .toggle:hover { color: var(--text); }
+.tree .toggle.variation { color: var(--accent); font-weight: 700; }
+.tree .toggle.leaf { cursor: default; color: transparent; }
+
 .tree .node .label { color: var(--text); }
 .tree .node.setup .label { color: var(--dim); }
+.tree .branch[hidden] { display: none; }
+
+.tree-tools {
+  display: flex;
+  gap: 6px;
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.tree-tools button { padding: 2px 8px; font-size: 11px; }
 
 /* -- results ------------------------------------------------------------ */
 

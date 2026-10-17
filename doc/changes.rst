@@ -51,9 +51,13 @@ Changes
   highlighted action.
 
   The *Show tree* action fills the tree panel with every node of the file, so
-  the main line runs down it with variations branching off. Clicking an entry
-  draws the position that node leads to on the board, honouring setup stones
-  and passes anywhere in the tree.
+  the main line runs down it with variations branching off. Nodes with branches
+  carry a triangle (``▼`` showing, ``▶`` folded), and a node where the game
+  actually branches is picked out, so it is visible which nodes can be folded.
+  Clicking the triangle folds a branch and hides everything below it; clicking
+  a row draws the position that node leads to, honouring setup stones and
+  passes anywhere in the tree. *Fold all* and *Unfold all* do it in one go, and
+  the arrow keys walk and fold the rows.
 
   The panels across the top row are width-adjustable: ``Ctrl+Left`` and
   ``Ctrl+Right`` resize the panel being worked in. They share the window, so

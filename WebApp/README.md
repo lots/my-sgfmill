@@ -81,7 +81,7 @@ bottom describing the highlighted action. Panel widths are draggable.
 | Action | What it does |
 | --- | --- |
 | Show board position | The position after a given number of moves |
-| Show tree | Every node of the file; click a move to see its position |
+| Show tree | Every node of the file, with triangles to fold branches; click a move to see its position |
 | Show game information | Players, result, komi, handicap, size, encoding |
 | List properties in the tree | Every node with its properties |
 | List moves | The main line, with vertices in GTP style |
@@ -98,6 +98,22 @@ twice brings the board back to where it started, and four quarter-turns do the
 same. *Apply one more* (`Ctrl+A`) adds another application without moving the
 selection; `Escape` resets the preview; `Run` (`Ctrl+J`) writes what is on
 screen.
+
+### The game tree
+
+`Show tree` fills the third panel with every node of the file. A node with
+branches below it carries a triangle — `▼` while they are showing, `▶` while
+they are folded — so it is visible at a glance which nodes can be folded. A node
+where the game actually **branches** (several variations from the same position)
+has its triangle picked out in blue, which is usually what you are looking for in
+a commented game; a node that merely continues the line has a dim one.
+
+* **Click the triangle** to fold or unfold that branch. Everything below it is
+  hidden, so a long game can be folded away to the part you are reading.
+* **Click the rest of the row** to show that node's position.
+* **Fold all** / **Unfold all**, above the tree, do it in one go.
+* **Arrow keys** walk the rows; `→` unfolds, `←` folds (and then moves to the
+  parent), `Enter` shows the position.
 
 ### Keys
 

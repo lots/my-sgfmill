@@ -200,6 +200,73 @@ equal("two stones in that variation", stones, 2);
 contains("the variation's white stone is at C7", variationBoard,
          "7  .  .  o  .  .  .  .  .  .");
 
+// -- folding branches ------------------------------------------------------
+
+// Every node with variations must say so: a triangle, and an arrow that shows
+// whether its branches are showing. A leaf gets no triangle but keeps the space.
+const rows = $$("#tree .node");
+const toggleOf = (index) => rows[index].querySelector(".toggle");
+const branchOf = (index) =>
+  rows[index].parentElement.querySelector(`.branch`);
+
+check("a node with variations shows a down arrow", toggleOf(1).textContent === "▼",
+      `got ${JSON.stringify(toggleOf(1).textContent)}`);
+equal("and says it is expanded", rows[1].getAttribute("aria-expanded"), "true");
+check("a node where the game branches is picked out",
+      toggleOf(1).classList.contains("variation"),
+      `class was ${toggleOf(1).className}`);
+check("a node that merely continues the line is not",
+      toggleOf(2).classList.contains("variation") === false,
+      `class was ${toggleOf(2).className}`);
+check("the first move has two variations",
+      rows[1].parentElement.querySelectorAll(":scope > .branch").length === 1);
+check("a leaf has no arrow", toggleOf(3).classList.contains("leaf"),
+      `class was ${toggleOf(3).className}`);
+check("and is not announced as expandable",
+      rows[3].hasAttribute("aria-expanded") === false);
+
+// Clicking the triangle folds that branch, and does not change the position
+// being shown (that is what clicking the row does).
+const captionBefore = text("#board-caption");
+toggleOf(1).dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+equal("folding shows an up arrow", toggleOf(1).textContent, "▶");
+equal("and is announced as collapsed", rows[1].getAttribute("aria-expanded"),
+      "false");
+equal("the branch is hidden", branchOf(1).hidden, true);
+equal("folding does not change the board caption", text("#board-caption"),
+      captionBefore);
+check("the descendants are inside the hidden branch",
+      branchOf(1).querySelectorAll(".node").length === 5,
+      `found ${branchOf(1).querySelectorAll(".node").length}`);
+
+// Unfolding brings them back.
+toggleOf(1).dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+equal("unfolding shows a down arrow again", toggleOf(1).textContent, "▼");
+equal("and the branch is visible", branchOf(1).hidden, false);
+
+// The buttons fold and unfold everything, which is the point on a large file.
+click("#tree-fold-all");
+equal("Fold all hides the branches", branchOf(1).hidden, true);
+check("Fold all leaves the root row on screen",
+      rows[0].closest(".branch") === null,
+      "the root row is inside a branch, so nothing would be visible");
+click("#tree-unfold-all");
+equal("Unfold all brings them back", branchOf(1).hidden, false);
+
+// Keyboard: Left folds, Right unfolds, and the arrow keys walk the rows.
+rows[1].focus?.();
+rows[1].dispatchEvent(new dom.window.KeyboardEvent("keydown",
+  { key: "ArrowLeft", bubbles: true }));
+equal("Left folds the branch", branchOf(1).hidden, true);
+rows[1].dispatchEvent(new dom.window.KeyboardEvent("keydown",
+  { key: "ArrowRight", bubbles: true }));
+equal("Right unfolds it again", branchOf(1).hidden, false);
+
+// Clicking a row still shows that node's position.
+rows[4].dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true }));
+contains("clicking a row still shows its position", text("#board-caption"),
+         "at W C7");
+
 // -- non-standard properties ----------------------------------------------
 
 ui.loadBytes("nonstandard.sgf", fixture("nonstandard.sgf"));
