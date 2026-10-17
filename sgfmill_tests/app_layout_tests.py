@@ -364,6 +364,153 @@ def _node_named(tree, label):
     return None
 
 
+def _highlighted_index(list_view):
+    """Which entry of a ListView is highlighted, or None."""
+    child = list_view.highlighted_child
+    if child is None:
+        return None
+    return list_view.children.index(child)
+
+
+def test_selecting_a_flip_applies_it_once(tc):
+    """A flip must be applied once per choice, however it is chosen.
+
+    Choosing an entry fires two events -- the entry is highlighted, then
+    selected -- and Run is a third. Applying the transformation on each of them
+    flipped the board twice, so a "flip" was a no-op whose preview showed the
+    original position.
+    """
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                index = [o[0] for o in app.OPERATIONS].index("flip_v")
+                original = _position_of(app)
+                list_view = app.query_one("#operations")
+                list_view.focus()
+                await pilot.pause()
+
+                # (a) arrow onto the entry: one application, and the board
+                #     really is the mirrored one.
+                while _highlighted_index(list_view) != index:
+                    await pilot.press("down")
+                    await pilot.pause()
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 1,
+                               "highlighting applied it %d times"
+                               % len(app.pending_transforms))
+                tc.assertNotEqual(_position_of(app), original)
+
+                # (b) press Enter on it: still one application. (Enter moves to
+                #     the parameter box, because a transformation has an output
+                #     file name to confirm, so it must not apply it again.)
+                await pilot.press("enter")
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 1,
+                               "Enter applied it twice")
+                tc.assertIn("1 applied", _text_of(app, "#board-view"))
+                tc.assertIn("vertical flip",
+                            _text_of(app, "#board-view").splitlines()[0])
+
+                # (c) running it writes the mirrored board and clears the
+                #     preview, so the next action starts from the file again.
+                target = Path(app.query_one("#param-input").value)
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertEqual(app.pending_transforms, [])
+                tc.assertTrue(target.exists())
+                _, saved = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
+                tc.assertEqual(saved[0], ("b", (6, 2)),
+                               "the saved board is not a single mirror image")
+
+                # (d) selecting a different action and choosing this one by
+                #     mouse also applies exactly once.
+                app._set_action(0)
+                await pilot.pause()
+                await pilot.click(list_view.children[index])
+                await pilot.pause()
+                await pilot.pause()
+                tc.assertEqual(len(app.pending_transforms), 1,
+                               "a mouse click applied it %d times"
+                               % len(app.pending_transforms))
+                tc.assertIn("vertical flip",
+                            _text_of(app, "#board-view").splitlines()[0])
+        _run(scenario())
+
+def test_a_saved_flip_is_mirrored_once(tc):
+    """The saved file must hold a single mirror image, not the original."""
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                # The sample's black stone is at (2, 2) on a 9x9 board;
+                # mirrored vertically it becomes (6, 2).
+                _, plays = _plays(app.game)
+                tc.assertEqual(plays[0], ("b", (2, 2)))
+
+                index = [o[0] for o in app.OPERATIONS].index("flip_v")
+                list_view = app.query_one("#operations")
+                list_view.focus()
+                await pilot.pause()
+                while _highlighted_index(list_view) != index:
+                    await pilot.press("down")
+                    await pilot.pause()
+                await pilot.pause()
+                await pilot.press("enter")
+                await pilot.pause()
+                target = Path(app.query_one("#param-input").value)
+                app.run_current_operation()
+                await pilot.pause()
+                tc.assertTrue(target.exists())
+                _, saved = _plays(sgf.Sgf_game.from_bytes(target.read_bytes()))
+                tc.assertEqual(saved[0], ("b", (6, 2)),
+                               "the saved board is not a single mirror image")
+        _run(scenario())
+
+
+def test_transform_output_names_say_what_they_do(tc):
+    """Each transformation should suggest a name matching its own action.
+
+    All four suggested '-rotate_cw', so turning a board anticlockwise and
+    flipping it both offered a file called '-rotate_cw'.
+    """
+    with scratch_dir() as tmp:
+        path = _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(140, 40)) as pilot:
+                await pilot.pause()
+                app.load_file(path)
+                await pilot.pause()
+                templates = [(o[0], o[3]) for o in app.OPERATIONS
+                             if o[0] in ("rotate_cw", "rotate_acw", "flip_v",
+                                         "flip_h")]
+                suffixes = [suffix for _identifier, suffix in templates]
+                tc.assertEqual(len(set(suffixes)), len(suffixes),
+                               "two transformations share a name: %s"
+                               % (templates,))
+                # The suggested name follows the action that is selected.
+                for identifier, suffix in templates:
+                    app._set_action([o[0] for o in app.OPERATIONS]
+                                    .index(identifier))
+                    await pilot.pause()
+                    suggested = Path(app.query_one("#param-input").value).name
+                    tc.assertEqual(suggested, path.stem + suffix + ".sgf",
+                                   "%s suggested %s" % (identifier, suggested))
+        _run(scenario())
+
+
 def _position_of(app):
     """The board diagram currently shown, without the caption line."""
     text = _text_of(app, "#board-view")

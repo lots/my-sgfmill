@@ -39,6 +39,13 @@ Changes
   then saves that result. The file that was opened is never transformed in
   place.
 
+  Choosing a transformation applies it once, and choosing it again -- by arrow
+  key, mouse or ``Enter`` -- does not apply it a second time, so one choice is
+  one flip. Further applications are made with *Apply one more* (``Ctrl+A``).
+  Each transformation suggests an output file name taken from its own action
+  (``game-flip_v.sgf``, ``game-rotate_acw.sgf``); previously all four suggested
+  the clockwise turn's name.
+
   Transformations accumulate, so the cycle can be seen closing: applying a flip
   twice, or a quarter-turn four times, brings the board back to where it
   started. Selecting the action again -- or pressing the *Apply one more*

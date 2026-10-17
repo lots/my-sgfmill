@@ -375,9 +375,9 @@ class SgfToolkitApp(App):
         ("clean",      "Clean non-standard -> file",   "Output file", "-clean"),
         ("to_utf8",    "Convert to UTF-8 -> file",     "Output file", ""),
         ("rotate_cw",  "Turn board 90 clockwise",      "Output file", "-rotate_cw"),
-        ("rotate_acw", "Turn board 90 anticlockwise",  "Output file", "-rotate_cw"),
-        ("flip_v",     "Flip board vertically",        "Output file", "-rotate_cw"),
-        ("flip_h",     "Flip board horizontally",      "Output file", "-rotate_cw"),
+        ("rotate_acw", "Turn board 90 anticlockwise",  "Output file", "-rotate_acw"),
+        ("flip_v",     "Flip board vertically",        "Output file", "-flip_v"),
+        ("flip_h",     "Flip board horizontally",      "Output file", "-flip_h"),
         ("split",      "Split collection -> directory", "Output directory", "_files"),
         ("save",       "Save back to the file",        None, ""),
     ]
@@ -500,7 +500,7 @@ class SgfToolkitApp(App):
             return False
         return True
 
-    def _set_action(self, index):
+    def _set_action(self, index, already_applied=False):
         if not 0 <= index < len(self.OPERATIONS):
             return
         self.current = self.OPERATIONS[index]
@@ -517,7 +517,7 @@ class SgfToolkitApp(App):
         self.query_one(MessageBar).update_message(
             identifier, self.path.name if self.path else None)
         # Show what a board transformation would do, before it is saved.
-        self._update_preview(identifier)
+        self._update_preview(identifier, already_applied=already_applied)
 
     def _set_parameter_prompt(self, prompt):
         """Show which target the parameter applies to, and what is wanted."""
@@ -541,17 +541,23 @@ class SgfToolkitApp(App):
         # Suggest a new name; _output_path() avoids collisions.
         return str(source.with_name(source.stem + default + source.suffix))
 
-    def _update_preview(self, identifier):
+    def _update_preview(self, identifier, already_applied=False):
         """Draw the board that the selected action is about.
 
-        Selecting a flip or a turn adds one application of it to whatever is
-        already pending, so the transformations compose: selecting a flip twice
-        brings the board back to where it started, and a quarter-turn four
-        times does too. 'Run' then saves the net result.
+        Selecting a flip or a turn applies it once, so the effect can be seen
+        before anything is written; selecting it again adds nothing, and
+        'Apply one more' (or Ctrl+A) is how further applications are made, so
+        the transformations compose and a flip twice brings the board back to
+        where it started.
 
         Selecting anything else clears the pending transformations and puts the
         plain final position back, so a stale preview can't be mistaken for the
         file's contents.
+
+        'already_applied' says the action was just applied as it was selected
+        -- clicking a list entry selects it twice (once as it is highlighted,
+        once when it is chosen), and without this the board would be flipped
+        twice by a single click.
         """
         if self.game is None:
             return
@@ -560,13 +566,14 @@ class SgfToolkitApp(App):
         if identifier != getattr(self, "_preview_action", None):
             self.pending_transforms = []
             self._preview_action = identifier
-        if identifier in self.BOARD_TRANSFORMS:
-            transformation, _words = self.BOARD_TRANSFORMS[identifier]
-            self.pending_transforms.append(transformation)
-            self._show_board(transforms=list(self.pending_transforms))
-        else:
+        if identifier not in self.BOARD_TRANSFORMS:
             self.pending_transforms = []
             self._show_board()
+            return
+        if not already_applied:
+            transformation, _words = self.BOARD_TRANSFORMS[identifier]
+            self.pending_transforms.append(transformation)
+        self._show_board(transforms=list(self.pending_transforms))
 
     def apply_transform_again(self):
         """Add one more application of the current transformation.
@@ -697,7 +704,12 @@ class SgfToolkitApp(App):
 
     @on(ListView.Selected, "#operations")
     def _action_selected(self, event):
-        self._set_action(self.query_one("#operations", ListView).index)
+        # Choosing an entry applies a transformation only if highlighting it
+        # hasn't already; otherwise a click, which does both, would apply it
+        # twice.
+        applied = bool(self.pending_transforms)
+        self._set_action(self.query_one("#operations", ListView).index,
+                         already_applied=applied)
         if self.current[2] is None:
             self.run_current_operation()
         else:
@@ -730,6 +742,10 @@ class SgfToolkitApp(App):
         if handler is None:
             self.notify("Not implemented: %s" % identifier, severity="warning")
             return
+        if identifier != getattr(self, "_preview_action", None):
+            # Running an action that isn't the one already on screen: bring the
+            # preview up to date first, which is what applies a transformation.
+            self._update_preview(identifier)
         try:
             handler()
         except Exception as e:                 # noqa: BLE001

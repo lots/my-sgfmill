@@ -174,23 +174,26 @@ Arrow keys and Enter drive the operations list and the file tree.
 ## Things worth knowing
 
 * **Nothing is overwritten by accident.** The actions that write files suggest
-  a new name (`game-clean.sgf`, `game-rotate_cw.sgf`, and so on); the file you
-  opened is left alone. If a name is already taken, a numbered one is used
+  a new name taken from the action itself (`game-clean.sgf`,
+  `game-flip_v.sgf`, `game-rotate_cw.sgf`, and so on); the file you opened is
+  left alone. If a name is already taken, a numbered one is used
   (`game-clean-1.sgf`) and the app says so. The only action that writes back to
   the target is **Save** (`s`); entering `-` in the output box also means "the
   open file".
 * **Relative output names** are resolved against the directory of the target
   file, not the app's working directory.
 * **The four flip and turn actions preview themselves, and they compose.**
-  Selecting *Turn board 90 clockwise*, *Turn board 90 anticlockwise*, *Flip
-  board vertically* or *Flip board horizontally* applies it to the preview on
-  the Board tab, captioned `PREVIEW: ... (n applied, Run saves it)`. Selecting
-  the same action again, or pressing **Apply one more** (`Ctrl+A`), adds
-  another application on top, so the cycle can be watched closing: **two flips
-  return to the original board, and four quarter-turns do too**. `Escape`
-  resets the preview. Nothing is written until you press **Run**, which saves
-  the board that is on screen — including a full cycle, which is saved as an
-  unchanged position and noted as such in the log.
+  Choosing *Turn board 90 clockwise*, *Turn board 90 anticlockwise*, *Flip
+  board vertically* or *Flip board horizontally* applies it once to the preview
+  on the Board tab, captioned `PREVIEW: ... (n applied, Run saves it)`.
+  Choosing it again — by arrow key, mouse or Enter — does **not** apply it a
+  second time, so one choice is always one flip, and a flip really is a mirror
+  image. **Apply one more** (`Ctrl+A`) is how another application is added on
+  top, so the cycle can be watched closing: **two flips return to the original
+  board, and four quarter-turns do too**. `Escape` resets the preview. Nothing
+  is written until you press **Run**, which saves the board that is on screen —
+  including a full cycle, which is saved as an unchanged position and noted as
+  such in the log.
 
   The target is never transformed in place: if the output name is the file you
   opened, the action refuses and says so (use **Save** for that). Pressing
