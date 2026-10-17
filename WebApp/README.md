@@ -21,20 +21,29 @@ WebApp/
 
 ## Running it
 
-Browsers refuse to load ES modules from `file://` URLs, so serve the directory
-over HTTP — any static server will do:
+**On Windows, double-click `run_web_app.cmd`.** It serves this directory and
+opens your browser at the right address; close the window (or press Ctrl+C) to
+stop it. That is the whole procedure.
+
+```
+run_web_app.cmd                  serve on the first free port from 8000
+run_web_app.cmd 8080             try that port first
+run_web_app.cmd --no-browser     serve without opening a browser
+```
+
+Anywhere else, or if you prefer to run the server yourself, serve the directory
+over HTTP — browsers refuse to load ES modules from `file://` URLs:
 
 ```bash
 cd WebApp
-python -m http.server 8000        # or: npx serve .
-# then open http://localhost:8000/
+python serve.py                   # what the .cmd runs: picks a free port and
+                                  # opens a browser
+python -m http.server 8000        # or any static server
+node tests/serve.mjs 8000         # or the dependency-free one in the tests
 ```
 
-There is also a dependency-free dev server in the tests directory:
-
-```bash
-node tests/serve.mjs 8000
-```
+The launcher looks for Python in this order: the repository's `.venv`, then
+`python` on the PATH, then the `py` launcher. Nothing is installed.
 
 ## Deploying it
 
@@ -134,11 +143,14 @@ Both test scripts also run from the library's own testsuite, as
 **"Nothing happens when I choose a file."** The app's JavaScript did not load.
 Almost always this is the page being opened as a file rather than served: a
 `file://` URL cannot load ES modules, so the page appears but nothing is wired
-up. The page now says so — a red banner explains it — so check for that first.
+up. The page says so — a red banner explains it — so check for that first.
+
+**On Windows, double-click `run_web_app.cmd`** and it will be served correctly.
+Otherwise:
 
 ```bash
 cd WebApp
-python -m http.server 8000     # then open http://localhost:8000/
+python serve.py                # picks a free port and opens a browser
 ```
 
 Other causes, in order of likelihood:

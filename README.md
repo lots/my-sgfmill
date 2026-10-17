@@ -120,13 +120,18 @@ python App/run_sgf_toolkit.py --help
 
 ## Running the web app
 
-It is plain files, so serve the directory over HTTP — a browser will not load
-ES modules from `file://`:
+On Windows, **double-click `WebApp\run_web_app.cmd`**: it serves the directory
+and opens your browser. Close the window to stop it.
+
+The app is plain files, but a browser will not load ES modules from `file://`,
+so it has to be served over HTTP:
 
 ```
+WebApp\run_web_app.cmd              # Windows: serve and open a browser
 cd WebApp
-python -m http.server 8000          # then open http://localhost:8000/
-node tests/serve.mjs 8000           # or the dependency-free server in the tests
+python serve.py                     # the same thing, anywhere
+python -m http.server 8000          # or any static server
+node tests/serve.mjs 8000           # or the dependency-free one in the tests
 ```
 
 Deploying it is copying `WebApp/` to a static web server: there is no build step

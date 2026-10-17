@@ -94,8 +94,44 @@ def test_web_app_files_are_present(tc):
     """The pieces a static host needs must all be in WebApp/."""
     required = ["index.html", "styles.css", "js/app.js", "js/sgf.js",
                 "js/board.js", "js/moves.js", "js/properties.js",
-                "js/tools.js", "README.md"]
+                "js/tools.js", "README.md", "serve.py", "run_web_app.cmd"]
     for name in required:
         path = os.path.join(_WEBAPP, name)
         tc.assertTrue(os.path.exists(path), "missing %s" % name)
         tc.assertGreater(os.path.getsize(path), 0, "%s is empty" % name)
+
+def test_launcher_is_a_batch_file_that_will_parse(tc):
+    """run_web_app.cmd must stay ASCII with CRLF line endings.
+
+    cmd.exe's parser is fragile with anything else, and a stray non-ASCII
+    character is invisible until the launcher fails on someone's machine.
+    """
+    path = os.path.join(_WEBAPP, "run_web_app.cmd")
+    if not os.path.exists(path):
+        tc.skipTest("the Windows launcher is not present")
+    with open(path, "rb") as f:
+        data = f.read()
+    tc.assertEqual([b for b in data if b > 127], [],
+                   "run_web_app.cmd contains non-ASCII bytes")
+    tc.assertFalse(data.startswith(b"\xef\xbb\xbf"), "it has a byte order mark")
+    bare_lf = data.count(b"\n") - data.count(b"\r\n")
+    tc.assertEqual(bare_lf, 0, "it has LF line endings rather than CRLF")
+
+def test_serve_script_uses_only_the_standard_library(tc):
+    """The launcher's server must not need anything installed."""
+    import ast
+    path = os.path.join(_WEBAPP, "serve.py")
+    if not os.path.exists(path):
+        tc.skipTest("serve.py is not present")
+    with open(path, encoding="utf-8") as f:
+        tree = ast.parse(f.read())
+    imported = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module.split(".")[0])
+    allowed = set(sys.stdlib_module_names)
+    tc.assertEqual(sorted(imported - allowed), [],
+                   "serve.py imports something that is not in the standard "
+                   "library")

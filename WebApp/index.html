@@ -14,8 +14,14 @@
   <p>
     This page has to be served over HTTP. Opening <code>index.html</code>
     straight from disk cannot work: browsers refuse to load JavaScript modules
-    from <code>file://</code> URLs. Serve the directory instead —
+    from <code>file://</code> URLs.
   </p>
+  <p>
+    <strong>Easiest fix:</strong> double-click
+    <code>run_web_app.cmd</code>, in this folder. It serves the app and opens
+    your browser at the right address.
+  </p>
+  <p>Or serve it yourself —</p>
 <pre><code>cd WebApp
 python -m http.server 8000
 # then open http://localhost:8000/</code></pre>

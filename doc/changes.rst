@@ -10,6 +10,12 @@ Changes
   server. That keeps the property the rest of this project guards -- the
   library itself still has no dependencies, and neither does either front end.
 
+  Because browsers will not load ES modules from ``file://`` URLs, the app has
+  to be served over HTTP. :file:`WebApp/run_web_app.cmd` does that and opens a
+  browser, so it can be started by double-clicking; :file:`WebApp/serve.py` is
+  what it runs, and it needs nothing outside the standard library. A page that
+  cannot start now says so, rather than looking merely inert.
+
   A static server cannot run Python, so :file:`WebApp/js/` is a port of the
   library rather than a binding to it. Two implementations of the same rules
   can drift apart, so the port is checked against the library instead of
