@@ -370,6 +370,113 @@ def _position_of(app):
     return text.split("\n", 1)[1] if "\n" in text else ""
 
 
+_PANES = ("#explorer", "#operations-pane", "#game-tree-pane")
+_PANE_FOCUS = {"#explorer": "#explorer-tree",
+               "#operations-pane": "#operations",
+               "#game-tree-pane": "#game-tree"}
+
+
+def _width(app, selector):
+    return app.query_one(selector).region.width
+
+
+def _row_total(app):
+    return sum(_width(app, s) for s in _PANES + ("#results",))
+
+
+def test_panes_can_be_resized(tc):
+    """Each panel across the top row should be width-adjustable.
+
+    The panels share the window, so widening one takes the space from the
+    results panel, which is whatever is left over.
+    """
+    with scratch_dir() as tmp:
+        _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 40)) as pilot:
+                await pilot.pause()
+                for pane in _PANES:
+                    app.query_one(_PANE_FOCUS[pane]).focus()
+                    await pilot.pause()
+                    before = _width(app, pane)
+                    await pilot.press("ctrl+right")
+                    await pilot.pause()
+                    tc.assertEqual(_width(app, pane), before + app.PANE_STEP,
+                                   "%s did not widen" % pane)
+                    await pilot.press("ctrl+left")
+                    await pilot.pause()
+                    tc.assertEqual(_width(app, pane), before,
+                                   "%s did not go back" % pane)
+                    tc.assertEqual(_row_total(app), 150)   # still fills it
+                # Widening a panel takes the space from the results panel.
+                app.query_one("#explorer-tree").focus()
+                await pilot.pause()
+                results_before = _width(app, "#results")
+                await pilot.press("ctrl+right")
+                await pilot.pause()
+                tc.assertEqual(_width(app, "#results"),
+                               results_before - app.PANE_STEP)
+        _run(scenario())
+
+def test_pane_resize_is_bounded(tc):
+    """A panel can't be squeezed away, or pushed past the window."""
+    with scratch_dir() as tmp:
+        _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 40)) as pilot:
+                await pilot.pause()
+                for pane in _PANES:
+                    app.query_one(_PANE_FOCUS[pane]).focus()
+                    await pilot.pause()
+                    for _ in range(20):
+                        app.action_resize_left()
+                    await pilot.pause()
+                    tc.assertEqual(_width(app, pane), app.PANE_MIN_WIDTH,
+                                   "%s went below its minimum" % pane)
+                    for _ in range(40):
+                        app.action_resize_right()
+                    await pilot.pause()
+                    # The results panel keeps its own minimum...
+                    tc.assertEqual(_width(app, "#results"),
+                                   app.RESULTS_MIN_WIDTH)
+                    # ...and the row still fits the window exactly.
+                    tc.assertEqual(_row_total(app), 150)
+                    for _ in range(40):        # put it back
+                        app.action_resize_left()
+                    await pilot.pause()
+        _run(scenario())
+
+def test_resize_without_a_panel_says_so(tc):
+    """Resizing with the focus outside the panels must not guess."""
+    with scratch_dir() as tmp:
+        _write_sample(tmp)
+
+        async def scenario():
+            app = SgfToolkitApp(tmp)
+            async with app.run_test(size=(150, 40)) as pilot:
+                await pilot.pause()
+                app.query_one("#message-bar").focus()
+                await pilot.pause()
+                before = _width(app, "#explorer")
+                app.action_resize_right()
+                await pilot.pause()
+                tc.assertEqual(_width(app, "#explorer"), before)
+                # ...and the parameter box counts as part of the actions
+                # panel, since it sits inside it.
+                app.query_one("#param-input").focus()
+                await pilot.pause()
+                before = _width(app, "#operations-pane")
+                app.action_resize_right()
+                await pilot.pause()
+                tc.assertEqual(_width(app, "#operations-pane"),
+                               before + app.PANE_STEP)
+        _run(scenario())
+
+
 def test_show_tree_lists_the_whole_game(tc):
     """'Show tree' should list every node, including variations."""
     with scratch_dir() as tmp:

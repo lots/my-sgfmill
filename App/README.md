@@ -98,6 +98,11 @@ message pane. The panels follow the order you work in: **select a target**,
 ```
 
 The four panels each take the full height of the top row; nothing is stacked.
+Their widths are yours to set: `Ctrl+Left` and `Ctrl+Right` make the panel
+you are working in narrower or wider, in steps of four columns. The panels
+share the window, so the results panel gives up the space and takes it back;
+each panel stops at a floor (so it can't be squeezed away) and the window edge
+(so nothing is pushed off the screen).
 
 * **1 — Explorer** (left) — a VS Code style tree rooted at the chosen
   directory: directories, plus `.sgf` files only, so hidden directories
@@ -136,6 +141,9 @@ The four panels each take the full height of the top row; nothing is stacked.
 | `Enter` | In the parameter box: run the action |
 | `e` | Focus the explorer (step 1) |
 | `a` | Focus the actions list (step 2) |
+| `t` | Focus the game tree (step 3) |
+| `Ctrl+Left` | Make the panel you are in narrower |
+| `Ctrl+Right` | Make the panel you are in wider |
 | `Backspace` | Go up one folder in the explorer |
 | `h` | Hide or show the message pane |
 | `r` | Reload the target from disk |

@@ -25,6 +25,11 @@ Changes
   draws the position that node leads to on the board, honouring setup stones
   and passes anywhere in the tree.
 
+  The panels across the top row are width-adjustable: ``Ctrl+Left`` and
+  ``Ctrl+Right`` resize the panel being worked in. They share the window, so
+  the results panel gives up the space and takes it back, and each panel has a
+  floor and a ceiling so none can be squeezed away or pushed off the screen.
+
   The file explorer can walk up out of the directory it was started on: it
   offers a ``..`` entry for the parent, any directory selected in it becomes
   the new root, and ``Backspace`` goes up a level.

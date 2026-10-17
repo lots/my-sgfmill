@@ -272,7 +272,7 @@ class SgfToolkitApp(App):
 
     #explorer {
         width: 34;
-        min-width: 24;
+        min-width: 14;
         border-right: solid $panel-lighten-2;
     }
     #explorer-heading, #operations-heading {
@@ -292,7 +292,7 @@ class SgfToolkitApp(App):
 
     #operations-pane {
         width: 34;
-        min-width: 26;
+        min-width: 14;
         border-right: solid $panel-lighten-2;
     }
     #operations { height: 1fr; min-height: 6; }
@@ -301,7 +301,7 @@ class SgfToolkitApp(App):
     /* The game tree, filled in by the 'Show tree' action. */
     #game-tree-pane {
         width: 40;
-        min-width: 26;
+        min-width: 14;
         border-right: solid $panel-lighten-2;
     }
     #tree-heading {
@@ -321,7 +321,7 @@ class SgfToolkitApp(App):
     #param-input { margin-bottom: 1; }
     #run { width: 100%; margin-bottom: 1; }
 
-    #results { width: 1fr; }
+    #results { width: 1fr; min-width: 16; }
     #target-bar {
         height: 1;
         padding: 0 1;
@@ -349,6 +349,9 @@ class SgfToolkitApp(App):
         Binding("escape", "reset_preview", "Reset preview"),
         Binding("e", "focus_explorer", "Explorer"),
         Binding("a", "focus_operations", "Actions"),
+        Binding("t", "focus_tree", "Tree"),
+        Binding("ctrl+left", "resize_left", "Narrower"),
+        Binding("ctrl+right", "resize_right", "Wider"),
         Binding("backspace", "go_up", "Up a folder"),
         Binding("h", "toggle_help", "Message"),
         Binding("r", "reload", "Reload"),
@@ -393,6 +396,14 @@ class SgfToolkitApp(App):
         transformation: words
         for transformation, words in BOARD_TRANSFORMS.values()
     }
+
+    # Explorer, actions, game tree and results run across the top row. Their
+    # widths are adjusted by the resize actions, within these bounds, so a pane
+    # can't be squeezed out of existence or pushed off the screen.
+    RESIZABLE_PANES = ("#explorer", "#operations-pane", "#game-tree-pane")
+    PANE_MIN_WIDTH = 14
+    RESULTS_MIN_WIDTH = 16
+    PANE_STEP = 4
 
     def __init__(self, start_dir):
         super().__init__()
@@ -1382,6 +1393,9 @@ class SgfToolkitApp(App):
     def action_focus_operations(self):
         self.query_one("#operations").focus()
 
+    def action_focus_tree(self):
+        self.query_one("#game-tree").focus()
+
     def action_toggle_help(self):
         help_pane = self.query_one(MessageBar)
         help_pane.display = not help_pane.display
@@ -1389,6 +1403,81 @@ class SgfToolkitApp(App):
     def action_refresh_explorer(self):
         self.query_one("#explorer-tree").reload()
         self.notify("File list refreshed.")
+
+    def action_resize_left(self):
+        """Make the pane in use narrower, giving the space to its neighbour."""
+        self._resize_pane(-self.PANE_STEP)
+
+    def action_resize_right(self):
+        """Make the pane in use wider, taking the space from its neighbour."""
+        self._resize_pane(self.PANE_STEP)
+
+    def _resize_pane(self, change):
+        """Adjust the width of the pane containing the focused widget.
+
+        The panes across the top row share the window between them: making one
+        wider takes the space from the one on its right, and the last pane
+        absorbs the difference. Results is not resized directly, since it is
+        whatever is left over.
+        """
+        pane = self._focused_pane()
+        if pane is None:
+            self.notify("Click in a panel first (or press e, a or t), then "
+                        "resize it.", title="Which panel?",
+                        severity="warning")
+            return
+        # The width the layout was last told to use, rather than the width on
+        # screen: a region only reflects a change once the screen has been
+        # refreshed, so reading it would make a second adjustment in the same
+        # turn of the event loop start from the old value.
+        current = getattr(pane, "_wanted_width", None)
+        if current is None:
+            current = pane.region.width
+        wanted = current + change
+        wanted = max(self.PANE_MIN_WIDTH, min(wanted, self._max_pane_width(pane)))
+        if wanted == current:
+            if change < 0:
+                self.notify("Already at the %d column minimum."
+                            % self.PANE_MIN_WIDTH, severity="warning")
+            else:
+                self.notify("No room for a wider panel: the row is full.",
+                            severity="warning")
+            return
+        pane._wanted_width = wanted
+        pane.styles.width = wanted
+
+    def _pane_width(self, pane):
+        """The width a pane has, or was last told to have.
+
+        A widget's region only changes once the screen has refreshed, so the
+        width a resize asked for is used until then; otherwise two adjustments
+        in the same turn of the event loop would both start from the old value.
+        """
+        wanted = getattr(pane, "_wanted_width", None)
+        return pane.region.width if wanted is None else wanted
+
+    def _max_pane_width(self, pane):
+        """The widest this pane can be without squeezing the results panel out.
+
+        Only the results panel gives up space when a pane grows -- the other
+        panels keep the width they were given -- so this pane may take what is
+        left once the results panel is down to its minimum.
+        """
+        others = sum(self._pane_width(self.query_one(selector))
+                     for selector in self.RESIZABLE_PANES
+                     if self.query_one(selector) is not pane)
+        room = self.size.width - others - self.RESULTS_MIN_WIDTH
+        return max(self.PANE_MIN_WIDTH, room)
+
+    def _focused_pane(self):
+        """The resizable pane that the focused widget sits in, or None."""
+        focused = self.focused
+        while focused is not None:
+            for selector in self.RESIZABLE_PANES:
+                if focused.id == selector.lstrip("#"):
+                    return focused
+            focused = focused.parent
+        return None
 
     def action_go_up(self):
         """Move the explorer to the parent directory."""
@@ -1457,6 +1546,8 @@ Keys:
   Ctrl+A   apply the current flip or turn one more time
   Escape   reset the board preview
   e        focus the explorer        a   focus the action list
+  t        focus the game tree
+  Ctrl+Left / Ctrl+Right  make the panel you are in narrower / wider
   h        hide/show the message pane
   r        reload the file           s   save it
   Backspace  go up a folder          d   open a directory
