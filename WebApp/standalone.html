@@ -1,0 +1,2700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SGF Toolkit (web, standalone)</title>
+<style>
+/*
+ * SGF Toolkit (web) -- styles.
+ *
+ * Two rows, like the desktop app: four panels across the top and a single
+ * message bar along the bottom. Panel widths are draggable; the last panel
+ * takes whatever is left.
+ */
+
+:root {
+  --bg: #1b1d23;
+  --panel: #22252d;
+  --panel-alt: #272b34;
+  --line: #363b46;
+  --text: #e6e8ee;
+  --dim: #9aa2b1;
+  --accent: #6aa9ff;
+  --black-stone: #f2f4f8;
+  --white-stone: #12141a;
+  --preview: #ffd166;
+  --error: #ff7b72;
+  --ok: #7ee787;
+  --mono: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* -- header ------------------------------------------------------------- */
+
+#header {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 14px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+#title { font-weight: 700; letter-spacing: 0.01em; }
+#subtitle { color: var(--dim); font-size: 12px; }
+#target-summary { margin-left: auto; color: var(--dim); font-size: 12px; }
+
+/* -- the four panels ---------------------------------------------------- */
+
+#body {
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.pane {
+  flex: 0 0 var(--pane-width, 260px);
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow: hidden;
+}
+
+/* The results panel is whatever is left over, so it has no fixed width. */
+#results {
+  flex: 1 1 auto;
+  min-width: 200px;
+  border-right: none;
+}
+
+.pane-title {
+  margin: 0;
+  padding: 7px 10px;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+  background: var(--panel-alt);
+  border-bottom: 1px solid var(--line);
+}
+
+.resizer {
+  flex: 0 0 5px;
+  cursor: col-resize;
+  background: var(--bg);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+.resizer:hover, .resizer.dragging { background: var(--accent); }
+body.dragging { cursor: col-resize; user-select: none; }
+
+/* -- explorer ----------------------------------------------------------- */
+
+.hint { color: var(--dim); font-size: 12px; padding: 0 10px; }
+#explorer-hint { margin: 8px 0 4px; }
+#explorer p { padding: 0 10px; }
+#explorer-status {
+  padding: 6px 10px 8px;
+  min-height: 2.2em;
+  border-top: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 12px;
+}
+#explorer-status.bad { color: var(--error); }
+#explorer-status.warn { color: var(--preview); }
+
+.button {
+  display: inline-block;
+  padding: 4px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-alt);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+}
+.button:hover { border-color: var(--accent); }
+
+/*
+ * The file input stays in the page but out of sight, rather than using
+ * display:none: a label opens the picker more reliably when its control is
+ * rendered, and keeping it means the input is still reachable by keyboard.
+ */
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Shown only when the app could not start; see the watchdog in index.html. */
+#boot-error {
+  grid-row: 1 / -1;
+  margin: 0;
+  padding: 16px 22px;
+  background: #3a1f22;
+  border-bottom: 2px solid var(--error);
+  overflow: auto;
+}
+#boot-error h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: var(--error);
+}
+#boot-error p { margin: 6px 0; max-width: 70ch; }
+#boot-error pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px 12px;
+  max-width: 70ch;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.file-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+}
+.file-list li {
+  padding: 5px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.file-list li:hover { background: var(--panel-alt); }
+.file-list li[aria-selected="true"] {
+  background: var(--panel-alt);
+  border-left-color: var(--accent);
+}
+.file-list li .bad { color: var(--error); }
+
+#explorer.drop-target { outline: 2px dashed var(--accent); outline-offset: -6px; }
+
+/* -- actions ------------------------------------------------------------ */
+
+.action-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+  min-height: 60px;
+}
+.action-list li {
+  padding: 5px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.action-list li:hover { background: var(--panel-alt); }
+.action-list li[aria-selected="true"] {
+  background: var(--panel-alt);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+#params {
+  border-top: 1px solid var(--line);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#param-label { color: var(--dim); font-size: 12px; }
+#param-input {
+  width: 100%;
+  padding: 5px 7px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+#param-input:disabled { opacity: 0.45; }
+.buttons { display: flex; gap: 6px; }
+button {
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel-alt);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: #2c4a7c; border-color: #3d5f97; }
+button:disabled { opacity: 0.45; cursor: default; }
+
+/* -- game tree ---------------------------------------------------------- */
+
+.tree {
+  overflow: auto;
+  padding: 6px 0;
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.tree .node {
+  padding: 2px 10px 2px 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tree .node:hover { background: var(--panel-alt); }
+.tree .node[aria-selected="true"] { background: #2c4a7c; }
+.tree .node .guide { color: #4a5160; }
+.tree .node .label { color: var(--text); }
+.tree .node.setup .label { color: var(--dim); }
+
+/* -- results ------------------------------------------------------------ */
+
+#target-bar {
+  padding: 6px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tabs { display: flex; gap: 2px; padding: 6px 8px 0; }
+#tabs button {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  background: transparent;
+  color: var(--dim);
+  padding: 4px 12px;
+}
+#tabs button[aria-selected="true"] {
+  background: var(--panel-alt);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+#panels { flex: 1; min-height: 0; overflow: auto; padding: 0 10px 10px; }
+.panel { display: none; }
+.panel.active { display: block; }
+
+.caption {
+  margin: 8px 0 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+}
+.caption .preview { color: var(--preview); font-weight: 600; }
+.caption .dim { color: #6e7686; }
+
+pre.board {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.25;
+  white-space: pre;
+  color: var(--text);
+}
+
+table.grid { border-collapse: collapse; font-size: 13px; }
+table.grid th {
+  text-align: right;
+  padding: 2px 10px 2px 0;
+  color: var(--dim);
+  font-weight: 600;
+  vertical-align: top;
+  white-space: nowrap;
+}
+table.grid td { padding: 2px 0; font-family: var(--mono); }
+table.grid tr.section th {
+  padding-top: 12px;
+  color: var(--accent);
+  text-align: left;
+}
+
+.list { margin: 0; padding-left: 18px; font-family: var(--mono); font-size: 12px; }
+.list li { padding: 1px 0; }
+
+.log {
+  margin: 6px 0 0;
+  padding-left: 22px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--dim);
+}
+.log li { padding: 2px 0; }
+.log li.ok { color: var(--ok); }
+.log li.warn { color: var(--preview); }
+.log li.error { color: var(--error); }
+
+#downloads { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+#downloads a {
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 9px;
+  text-decoration: none;
+  font-size: 12px;
+}
+#downloads a:hover { border-color: var(--accent); }
+
+/* -- message bar -------------------------------------------------------- */
+
+#message-bar {
+  padding: 6px 14px;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--text);
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+}
+#message-bar.hidden { display: none; }
+
+/* Narrow screens: stack the panels rather than squeezing them. */
+@media (max-width: 900px) {
+  #body { flex-direction: column; overflow: auto; }
+  .pane { flex: 1 1 auto; min-height: 200px; border-right: none;
+          border-bottom: 1px solid var(--line); }
+  .resizer { display: none; }
+  body { overflow: auto; height: auto; }
+}
+</style>
+</head>
+<body>
+
+<div id="boot-error" hidden>
+  <h2>The app could not start</h2>
+  <p id="boot-error-detail"></p>
+  <p>
+    This page has to be served over HTTP. Opening <code>index.html</code>
+    straight from disk cannot work: browsers refuse to load JavaScript modules
+    from <code>file://</code> URLs.
+  </p>
+  <p>
+    <strong>Easiest fix:</strong> open <code>standalone.html</code>, in this
+    folder. It is the same app with everything inlined, so it needs no server at
+    all — double-clicking it just works.
+  </p>
+  <p>
+    Or double-click <code>run_web_app.cmd</code>, which serves this version and
+    opens your browser at the right address.
+  </p>
+  <p>Or serve it yourself —</p>
+<pre><code>cd WebApp
+python -m http.server 8000
+# then open http://localhost:8000/</code></pre>
+  <p>
+    If it <em>is</em> being served, check that <code>.js</code> files are served
+    as <code>text/javascript</code>, and that the browser console shows no
+    error.
+  </p>
+</div>
+
+<noscript>
+  <div id="boot-error">
+    <h2>JavaScript is turned off</h2>
+    <p>This app is written in JavaScript, so it cannot run without it.</p>
+  </div>
+</noscript>
+
+<header id="header">
+  <span id="title">SGF Toolkit</span>
+  <span id="subtitle">a web front end for the sgfmill library</span>
+  <span id="target-summary"></span>
+</header>
+
+<main id="body">
+
+  <section class="pane" id="explorer" style="--pane-width: 240px">
+    <h2 class="pane-title">1&nbsp; Select target</h2>
+    <p class="hint" id="explorer-hint">Drop <code>.sgf</code> files here, or</p>
+    <p><label class="button" for="file-input">Open .sgf files…</label>
+       <input type="file" id="file-input" class="file-input"
+              accept=".sgf,.SGF,application/x-go-sgf" multiple></p>
+    <ul id="files" class="file-list"></ul>
+    <p id="explorer-status" class="hint" role="status"></p>
+  </section>
+
+  <div class="resizer" data-pane="explorer" title="Drag to resize"></div>
+
+  <section class="pane" id="actions" style="--pane-width: 260px">
+    <h2 class="pane-title">2&nbsp; Select action</h2>
+    <ul id="operations" class="action-list" role="listbox"
+        aria-label="Actions" tabindex="0"></ul>
+    <div id="params">
+      <label id="param-label" for="param-input"></label>
+      <input id="param-input" type="text" autocomplete="off" spellcheck="false">
+      <div class="buttons">
+        <button id="run" type="button" class="primary">Run</button>
+        <button id="apply-again" type="button">Apply one more</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="resizer" data-pane="actions" title="Drag to resize"></div>
+
+  <section class="pane" id="tree-pane" style="--pane-width: 300px">
+    <h2 class="pane-title">3&nbsp; Game tree</h2>
+    <div id="tree" class="tree" role="tree" tabindex="0">
+      <p class="hint">Choose <em>Show tree</em> to fill this pane.</p>
+    </div>
+  </section>
+
+  <div class="resizer" data-pane="tree" title="Drag to resize"></div>
+
+  <section class="pane" id="results">
+    <div id="target-bar">No file loaded</div>
+    <nav id="tabs" role="tablist">
+      <button role="tab" data-tab="board" aria-selected="true">Board</button>
+      <button role="tab" data-tab="info">Info</button>
+      <button role="tab" data-tab="moves">Moves</button>
+      <button role="tab" data-tab="notes">Notes</button>
+    </nav>
+    <div id="panels">
+      <div class="panel active" id="panel-board">
+        <p class="caption" id="board-caption"></p>
+        <pre id="board-view" class="board"></pre>
+      </div>
+      <div class="panel" id="panel-info"><div id="info-view"></div></div>
+      <div class="panel" id="panel-moves"><div id="moves-view"></div></div>
+      <div class="panel" id="panel-notes">
+        <div id="downloads"></div>
+        <ol id="notes-view" class="log"></ol>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer id="message-bar">
+  <span id="message">&nbsp;</span>
+</footer>
+
+<script>
+  /*
+   * Watchdog.
+   *
+   * If js/app.js never runs -- because the page was opened from a file:// URL,
+   * or a server sent .js as text/plain, or something threw during start-up --
+   * the page would still look presentable but do nothing at all, which is
+   * exactly what "no file can be opened" looks like. Catch that and say why.
+   */
+  (function () {
+    var box = document.getElementById("boot-error");
+    var detail = document.getElementById("boot-error-detail");
+    function report(message) {
+      if (window.sgfToolkit) return;          // it started; nothing to report
+      detail.textContent = message;
+      box.hidden = false;
+    }
+    // Resource errors (a module that will not load) do not bubble, so the
+    // listener has to be in the capture phase.
+    window.addEventListener("error", function (event) {
+      var source = event.target;
+      if (source && source !== window && source.tagName) {
+        report("Could not load " + (source.src || source.tagName) + ".");
+      } else {
+        report("A script error stopped the app: " +
+               (event.message || "unknown error"));
+      }
+    }, true);
+    window.addEventListener("DOMContentLoaded", function () {
+      setTimeout(function () {
+        report("The app's JavaScript did not load.");
+      }, 400);
+    });
+  })();
+</script>
+<script>
+(function () {
+"use strict";
+
+// ---- properties.js -----------------------------------------------
+/**
+ * SGF property values: interpretation and serialisation.
+ *
+ * This mirrors sgfmill.sgf_properties for the property types the web app
+ * needs. Points are held the way sgfmill holds them -- [row, col] with
+ * (0, 0) at the bottom left, the GTP convention -- so that a board diagram
+ * comes out the same way round as the Python library's.
+ */
+
+/** Largest board this library supports (sgfmill supports up to 26x26). */
+const MAX_SIZE = 26;
+
+class SgfError extends Error {}
+
+/**
+ * SGF point -> [row, col]. A pass is null.
+ *
+ * As in FF[4] after this project's change, a pass is the empty value. The
+ * older 'tt' spelling is still accepted as a pass on boards of 19 or less.
+ */
+function interpretGoPoint(value, size) {
+  if (value === "" || value == null) return null;
+  if (value.length !== 2) {
+    throw new SgfError(`invalid point: ${JSON.stringify(value)}`);
+  }
+  const col = value.charCodeAt(0) - 97;
+  const row = size - 1 - (value.charCodeAt(1) - 97);
+  if (col < 0 || col >= size || row < 0 || row >= size) {
+    if (value === "tt" && size <= 19) return null;
+    throw new SgfError(`point off the board: ${JSON.stringify(value)}`);
+  }
+  return [row, col];
+}
+
+/** [row, col] -> SGF point. null (a pass) becomes the empty value. */
+function serialiseGoPoint(point, size) {
+  if (point == null) return "";
+  const [row, col] = point;
+  return String.fromCharCode(97 + col) + String.fromCharCode(97 + size - 1 - row);
+}
+
+/** Text of a point in GTP style, eg "D4"; passes read as "pass". */
+function formatVertex(point) {
+  if (point == null) return "pass";
+  const [row, col] = point;
+  // Column letters skip 'I', as SGF and GTP both do.
+  const letter = col < 8
+    ? String.fromCharCode(65 + col)
+    : String.fromCharCode(66 + col);
+  return letter + (row + 1);
+}
+
+/** Interpret a raw value according to a property's type. */
+function interpretValue(identifier, raw, size) {
+  const type = PROPERTY_TYPES[identifier] || "raw";
+  switch (type) {
+    case "number":
+      return Number(raw);
+    case "real":
+    case "double":
+      return Number(raw);
+    case "colour":
+      return raw[0].toLowerCase();
+    case "point":
+      return interpretGoPoint(raw, size);
+    case "pointList":
+      return interpretPointList([raw], size);
+    case "label":
+      return interpretLabel(raw, size);
+    case "text":
+      return unescapeText(raw);
+    default:
+      return raw;
+  }
+}
+
+/**
+ * Interpret a point list: the raw values of a property, as a list of points.
+ *
+ * FF[4] allows a *compressed* value: "aa:cc" means the whole rectangle with
+ * those corners. The list is a set, so overlapping values are merged and
+ * duplicates disappear -- which is what sgfmill's interpret_point_list does,
+ * and what the differential tests compare.
+ */
+function interpretPointList(values, size) {
+  const seen = new Set();
+  const points = [];
+  const add = (point) => {
+    const key = point[0] * MAX_SIZE + point[1];
+    if (seen.has(key)) return;
+    seen.add(key);
+    points.push(point);
+  };
+  for (const value of values) {
+    // An empty value is the FF[4] way of writing "no points" (an elist such as
+    // DD[]); it contributes nothing.
+    if (value === "") continue;
+    const colon = value.indexOf(":");
+    if (colon === -1) {
+      add(interpretGoPoint(value, size));
+      continue;
+    }
+    const topLeft = interpretGoPoint(value.slice(0, colon), size);
+    const bottomRight = interpretGoPoint(value.slice(colon + 1), size);
+    const [top, left] = topLeft;
+    const [bottom, right] = bottomRight;
+    if (!(bottom <= top && left <= right)) throw new SgfError("bad rectangle");
+    for (let row = bottom; row <= top; row++) {
+      for (let col = left; col <= right; col++) add([row, col]);
+    }
+  }
+  return points;
+}
+
+/** A label value is "point:text". */
+function interpretLabel(raw, size) {
+  const index = raw.indexOf(":");
+  if (index === -1) return [];
+  const point = interpretGoPoint(raw.slice(0, index), size);
+  return [[point, raw.slice(index + 1)]];
+}
+
+/** FF[4] text: only backslash and closing bracket are escaped. */
+function unescapeText(raw) {
+  let out = "";
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (ch === "\\" && i + 1 < raw.length) {
+      const next = raw[++i];
+      // A backslash before a newline is a soft line break: it vanishes.
+      if (next !== "\n" && next !== "\r") out += next;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+function escapeText(text) {
+  return String(text).replace(/\\/g, "\\\\").replace(/\]/g, "\\]");
+}
+
+/**
+ * Property types, by identifier, for the properties that matter here.
+ * Anything not listed is treated as raw, which is what serialisation needs.
+ */
+const PROPERTY_TYPES = {
+  // Move
+  B: "point", W: "point", KO: "raw", MN: "number",
+  // Setup
+  AB: "pointList", AW: "pointList", AE: "pointList", PL: "colour",
+  // Node annotation
+  C: "text", DM: "double", GB: "double", GW: "double", HO: "double",
+  N: "simpletext", UC: "double", V: "real",
+  // Move annotation
+  BM: "double", DO: "raw", IT: "raw", TE: "double",
+  // Markup
+  AR: "raw", CR: "pointList", DD: "raw", LB: "label", LN: "raw",
+  MA: "pointList", SL: "pointList", SQ: "pointList", TR: "pointList",
+  // Root
+  AP: "simpletext", CA: "simpletext", FF: "number", GM: "number",
+  ST: "number", SZ: "raw",
+  // Game info
+  AN: "simpletext", BR: "simpletext", BT: "simpletext", CP: "simpletext",
+  DT: "simpletext", EV: "simpletext", GN: "simpletext", GC: "text",
+  ON: "simpletext", OT: "simpletext", PB: "simpletext", PC: "simpletext",
+  PW: "simpletext", RE: "simpletext", RO: "simpletext", RU: "simpletext",
+  SO: "simpletext", TM: "real", US: "simpletext", WR: "simpletext",
+  WT: "simpletext", HA: "number", KM: "real",
+  // Timing
+  BL: "real", WL: "real", OB: "number", OW: "number",
+  // Misc
+  FG: "raw", PM: "number", VW: "raw",
+  // Territory
+  TB: "pointList", TW: "pointList",
+  // Go-specific
+  TC: "number",
+};
+
+/** Is this a text property, so its value needs escaping when written? */
+function isTextProperty(identifier) {
+  const type = PROPERTY_TYPES[identifier];
+  return type === "text" || type === "simpletext";
+}
+
+/** Does a value of this property hold points, so a transformation moves it? */
+function isPointProperty(identifier) {
+  const type = PROPERTY_TYPES[identifier];
+  return type === "point" || type === "pointList" || type === "label";
+}
+
+// ---- board.js ----------------------------------------------------
+/**
+ * A Go board: stones, captures and the checks sgfmill's Board makes.
+ *
+ * sgfmill's Board.play() raises ValueError for an occupied point or a point
+ * with no liberties (a suicide), and the app treats that as "stop replaying".
+ */
+
+
+
+class Board {
+  constructor(size) {
+    this.size = size;
+    // board[row][col] is "b", "w" or null. Row 0 is the bottom.
+    this.board = Array.from({ length: size }, () => new Array(size).fill(null));
+  }
+
+  get(row, col) {
+    return this.board[row][col];
+  }
+
+  listStones(colour) {
+    const stones = [];
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.board[row][col] === colour) stones.push([row, col]);
+      }
+    }
+    return stones;
+  }
+
+  applySetup(black = [], white = [], empty = []) {
+    for (const [row, col] of black) this.board[row][col] = "b";
+    for (const [row, col] of white) this.board[row][col] = "w";
+    for (const [row, col] of empty) this.board[row][col] = null;
+  }
+
+  /** Play a stone, removing any captured groups. Throws on an illegal move. */
+  play(row, col, colour) {
+    if (row < 0 || row >= this.size || col < 0 || col >= this.size) {
+      throw new SgfError("point off the board");
+    }
+    if (this.board[row][col] != null) throw new SgfError("point is occupied");
+    this.board[row][col] = colour;
+    const opponent = colour === "b" ? "w" : "b";
+    for (const [r, c] of this.neighbours(row, col)) {
+      if (this.board[r][c] === opponent) {
+        const group = this.chain(r, c);
+        if (this.countLiberties(group) === 0) {
+          for (const [gr, gc] of group) this.board[gr][gc] = null;
+        }
+      }
+    }
+    if (this.countLiberties(this.chain(row, col)) === 0) {
+      // Suicide: undo the stone before complaining, as nothing moved.
+      this.board[row][col] = null;
+      throw new SgfError("suicide");
+    }
+  }
+
+  neighbours(row, col) {
+    const result = [];
+    if (row > 0) result.push([row - 1, col]);
+    if (row < this.size - 1) result.push([row + 1, col]);
+    if (col > 0) result.push([row, col - 1]);
+    if (col < this.size - 1) result.push([row, col + 1]);
+    return result;
+  }
+
+  /** The connected stones of the same colour containing this point. */
+  chain(row, col) {
+    const colour = this.board[row][col];
+    if (colour == null) return [];
+    const seen = new Set();
+    const stack = [[row, col]];
+    const group = [];
+    seen.add(row * this.size + col);
+    while (stack.length > 0) {
+      const [r, c] = stack.pop();
+      group.push([r, c]);
+      for (const [nr, nc] of this.neighbours(r, c)) {
+        const key = nr * this.size + nc;
+        if (seen.has(key)) continue;
+        if (this.board[nr][nc] === colour) {
+          seen.add(key);
+          stack.push([nr, nc]);
+        }
+      }
+    }
+    return group;
+  }
+
+  countLiberties(group) {
+    const liberties = new Set();
+    for (const [row, col] of group) {
+      for (const [nr, nc] of this.neighbours(row, col)) {
+        if (this.board[nr][nc] == null) liberties.add(nr * this.size + nc);
+      }
+    }
+    return liberties.size;
+  }
+}
+
+/**
+ * A board diagram, drawn as text.
+ *
+ * The layout is sgfmill.ascii_boards.render_board's, character for character:
+ * row numbers down the side (right aligned), column letters along the bottom
+ * skipping I, '#' for black and 'o' for white. The differential tests compare
+ * this with the Python renderer, so the two front ends show the same diagram.
+ */
+function renderBoard(board) {
+  const size = board.size;
+  const gutter = String(size).length;
+  const lines = [];
+  for (let row = size - 1; row >= 0; row--) {
+    const cells = [];
+    for (let col = 0; col < size; col++) {
+      const stone = board.board[row][col];
+      cells.push(stone === "b" ? "#" : stone === "w" ? "o" : ".");
+    }
+    lines.push(String(row + 1).padStart(gutter, " ") + "  " +
+               cells.join("  "));
+  }
+  const letters = [];
+  for (let col = 0; col < size; col++) {
+    letters.push(col < 8
+      ? String.fromCharCode(65 + col)
+      : String.fromCharCode(66 + col));
+  }
+  lines.push(" ".repeat(gutter + 2) + letters.join("  "));
+  return lines.join("\n");
+}
+
+// ---- sgf.js ------------------------------------------------------
+/**
+ * SGF FF[4] game tree: parsing and serialisation.
+ *
+ * Mirrors sgfmill.sgf closely enough that the web app and the Python library
+ * agree on what a file contains and on the bytes written back out. The
+ * differential tests in tests/ compare the two.
+ */
+
+
+
+
+
+/** One node of a game tree. */
+class SgfNode {
+  constructor(game) {
+    this.game = game;
+    // Identifier -> array of raw (still escaped) string values.
+    this._properties = new Map();
+    this.parent = null;
+    this.children = [];
+  }
+
+  /** Raw values for an identifier, or undefined. */
+  getRaw(identifier) {
+    return this._properties.get(identifier);
+  }
+
+  getRawMap() {
+    return this._properties;
+  }
+
+  has(identifier) {
+    return this._properties.has(identifier);
+  }
+
+  identifiers() {
+    return [...this._properties.keys()];
+  }
+
+  setRaw(identifier, values) {
+    this._properties.set(identifier, values.map(String));
+  }
+
+  set(identifier, value) {
+    if (value == null) {
+      this._properties.delete(identifier);
+      return;
+    }
+    this.setRaw(identifier, Array.isArray(value) ? value : [value]);
+  }
+
+  /** The move this node makes, as [colour, rawPoint], or [null, null]. */
+  getRawMove() {
+    if (this._properties.has("B")) return ["b", this._properties.get("B")[0]];
+    if (this._properties.has("W")) return ["w", this._properties.get("W")[0]];
+    return [null, null];
+  }
+
+  getMove() {
+    const [colour, raw] = this.getRawMove();
+    if (colour == null) return [null, null];
+    return [colour, interpretGoPoint(raw, this.game.getSize())];
+  }
+
+  /** Setup stones: [black, white, empty] as arrays of points.
+   *
+   * Compressed point lists ("aa:cc") and duplicates are handled by
+   * interpretPointList, as sgfmill handles them.
+   */
+  getSetupStones() {
+    const size = this.game.getSize();
+    const read = (identifier) =>
+      interpretPointList(this._properties.get(identifier) || [], size);
+    return [read("AB"), read("AW"), read("AE")];
+  }
+
+  /** Iterate over the children (the variations from this node). */
+  *[Symbol.iterator]() {
+    yield* this.children;
+  }
+}
+
+/** A parsed game: a root node, its tree, and the properties that shape it. */
+class SgfGame {
+  constructor(root) {
+    this.root = root;
+  }
+
+  getRoot() {
+    return this.root;
+  }
+
+  getSize() {
+    const raw = this.root.getRaw("SZ");
+    if (!raw) return 19;
+    const value = raw[0];
+    if (value.includes(":")) throw new SgfError("bad SZ property");
+    const size = Number(value);
+    if (!Number.isInteger(size) || size < 1 || size > MAX_SIZE) {
+      throw new SgfError("bad SZ property");
+    }
+    return size;
+  }
+
+  /** The main line: the leftmost variation, as an array of nodes. */
+  mainLine() {
+    const nodes = [this.root];
+    let node = this.root;
+    while (node.children.length > 0) {
+      node = node.children[0];
+      nodes.push(node);
+    }
+    return nodes;
+  }
+
+  /** Append a node to the end of the main line. */
+  extendMainSequence() {
+    const line = this.mainLine();
+    const node = new SgfNode(this);
+    node.parent = line[line.length - 1];
+    node.parent.children.push(node);
+    return node;
+  }
+
+  serialise(wrap = 79) {
+    return serialiseGame(this, wrap);
+  }
+}
+
+// -- parsing ---------------------------------------------------------------
+
+/**
+ * Parse one or more games from SGF text.
+ *
+ * Returns an array of SgfGame. A collection may hold several games.
+ */
+function parseSgfCollection(text) {
+  const parser = new Parser(text);
+  const games = parser.parseCollection();
+  if (games.length === 0) throw new SgfError("no games found");
+  return games;
+}
+
+function parseSgfGame(text) {
+  return parseSgfCollection(text)[0];
+}
+
+class Parser {
+  constructor(text) {
+    this.text = text;
+    this.position = 0;
+  }
+
+  error(message) {
+    throw new SgfError(`${message} at offset ${this.position}`);
+  }
+
+  skipWhitespace() {
+    while (this.position < this.text.length) {
+      if (!/\s/.test(this.text[this.position])) return;
+      this.position++;
+    }
+  }
+
+  parseCollection() {
+    const games = [];
+    for (;;) {
+      this.skipWhitespace();
+      if (this.position >= this.text.length) break;
+      games.push(this.parseGame());
+    }
+    return games;
+  }
+
+  parseGame() {
+    this.expect("(");
+    const game = new SgfGame(null);
+    const stack = [];       // nodes whose children are being collected
+    let current = null;
+
+    for (;;) {
+      this.skipWhitespace();
+      const ch = this.text[this.position];
+      if (ch === undefined) this.error("unterminated game");
+      if (ch === ";") {
+        this.position++;
+        const node = this.parseNode(game);
+        if (current === null) {
+          if (game.root !== null) this.error("two roots");
+          game.root = node;
+        } else {
+          node.parent = current;
+          current.children.push(node);
+        }
+        current = node;
+      } else if (ch === "(") {
+        if (current === null) this.error("variation before any node");
+        this.position++;
+        stack.push(current);
+      } else if (ch === ")") {
+        this.position++;
+        if (stack.length > 0) {
+          current = stack.pop();
+        } else {
+          break;
+        }
+      } else {
+        this.error(`unexpected ${JSON.stringify(ch)}`);
+      }
+    }
+    if (game.root === null) this.error("game has no nodes");
+    return game;
+  }
+
+  parseNode(game) {
+    const node = new SgfNode(game);
+    for (;;) {
+      this.skipWhitespace();
+      const ch = this.text[this.position];
+      if (ch === undefined) this.error("unterminated node");
+      if (ch === ";" || ch === "(" || ch === ")") break;
+      const identifier = this.parseIdentifier();
+      const values = [];
+      for (;;) {
+        this.skipWhitespace();
+        if (this.text[this.position] !== "[") break;
+        values.push(this.parseValue());
+      }
+      if (values.length === 0) this.error(`${identifier} has no value`);
+      node.setRaw(identifier, values);
+    }
+    return node;
+  }
+
+  parseIdentifier() {
+    const start = this.position;
+    while (this.position < this.text.length &&
+           /[A-Za-z]/.test(this.text[this.position])) {
+      this.position++;
+    }
+    if (this.position === start) this.error("expected a property identifier");
+    // FF[4] identifiers are upper case; accept lower case as well, since real
+    // files contain both, and normalise so the rest of the code can assume it.
+    return this.text.slice(start, this.position).toUpperCase();
+  }
+
+  parseValue() {
+    this.expect("[");
+    let raw = "";
+    for (;;) {
+      if (this.position >= this.text.length) this.error("unterminated value");
+      const ch = this.text[this.position];
+      if (ch === "\\") {
+        // Keep the escape in the raw value; interpretation removes it.
+        raw += ch;
+        this.position++;
+        if (this.position < this.text.length) {
+          raw += this.text[this.position++];
+        }
+        continue;
+      }
+      this.position++;
+      if (ch === "]") return raw;
+      raw += ch;
+    }
+  }
+
+  expect(ch) {
+    this.skipWhitespace();
+    if (this.text[this.position] !== ch) {
+      this.error(`expected ${JSON.stringify(ch)}`);
+    }
+    this.position++;
+  }
+}
+
+// -- serialisation ---------------------------------------------------------
+
+/**
+ * Build the "coarse tree" sgfmill serialises from.
+ *
+ * A run of nodes that each have a single child is one sequence; a node with
+ * several children is where the variations start. That is what makes a simple
+ * game come out as "(;root;move;move)" and a branching one as
+ * "(;root;B(x)(y))".
+ */
+function coarseTree(node) {
+  const sequence = [node];
+  let current = node;
+  while (current.children.length === 1) {
+    current = current.children[0];
+    sequence.push(current);
+  }
+  return { sequence, children: current.children.map(coarseTree) };
+}
+
+/** Sorted for serialisation: FF first (as sgfmill does), then alphabetical. */
+function compareIdentifiers(a, b) {
+  if (a === "FF") return -1;
+  if (b === "FF") return 1;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+function blockFormat(pieces, width = 79) {
+  const encoder = new TextEncoder();
+  const lines = [];
+  let line = "";
+  let length = 0;
+  for (const piece of pieces) {
+    const size = encoder.encode(piece).length;
+    if (length + size > width) {
+      lines.push(line);
+      line = "";
+      length = 0;
+    }
+    line += piece;
+    length += size;
+  }
+  if (line) lines.push(line);
+  return lines.join("\n");
+}
+
+/**
+ * Serialise a game, byte for byte as sgfmill would.
+ *
+ * Raw values are written back exactly as they were parsed -- sgfmill keeps them
+ * verbatim rather than re-interpreting them -- and lines are wrapped at 79
+ * bytes, which are both what the differential tests check.
+ */
+function serialiseGame(game, wrap = 79) {
+  const pieces = [];
+  const stack = [coarseTree(game.getRoot())];
+  while (stack.length > 0) {
+    const tree = stack.pop();
+    if (tree === null) {
+      pieces.push(")");
+      continue;
+    }
+    pieces.push("(");
+    for (const node of tree.sequence) {
+      pieces.push(";");
+      for (const identifier of node.identifiers().sort(compareIdentifiers)) {
+        let piece = identifier;
+        for (const value of node.getRaw(identifier)) piece += "[" + value + "]";
+        pieces.push(piece);
+      }
+    }
+    stack.push(null);
+    for (let i = tree.children.length - 1; i >= 0; i--) {
+      stack.push(tree.children[i]);
+    }
+  }
+  pieces.push("\n");
+  return wrap == null ? pieces.join("") : blockFormat(pieces, wrap);
+}
+
+/** Set a text property, escaping it as FF[4] requires. */
+function setText(node, identifier, text) {
+  node.setRaw(identifier, [escapeText(text)]);
+}
+
+/** The move at a node as text, eg "B D4"; used by the tree pane. */
+function nodeMoveLabel(node) {
+  const [colour, raw] = node.getRawMove();
+  if (colour == null) return null;
+  let point = null;
+  try {
+    point = interpretGoPoint(raw, node.game.getSize());
+  } catch (error) {
+    point = null;
+  }
+  return `${colour.toUpperCase()} ${formatVertex(point)}`;
+}
+
+// ---- moves.js ----------------------------------------------------
+/**
+ * Reading positions out of a game: the starting stones and the moves.
+ *
+ * Mirrors sgfmill.sgf_moves.get_setup_and_moves(), which is what the library
+ * uses to turn a game into a board the app can draw.
+ */
+
+
+
+
+/**
+ * Return [board, plays] for a game.
+ *
+ * The board carries any setup stones, and each play is [colour, point] where
+ * point is null for a pass. The main line is followed (the leftmost
+ * variation).
+ */
+function getSetupAndMoves(game) {
+  const size = game.getSize();
+  const root = game.getRoot();
+  const [black, white, empty] = root.getSetupStones();
+  const board = new Board(size);
+  board.applySetup(black, white, empty);
+
+  const plays = [];
+  for (const node of game.mainLine().slice(1)) {
+    const [colour, point] = node.getMove();
+    if (colour !== "b" && colour !== "w") continue;
+    plays.push([colour, point]);
+  }
+  return [board, plays];
+}
+
+/**
+ * Return a board with the first `limit` moves played.
+ *
+ * Stops early, without raising, if the game contains an illegal move: a file
+ * being inspected should still show what it can.
+ */
+function positionAfter(game, limit = null) {
+  const [start, plays] = getSetupAndMoves(game);
+  const count = limit == null ? plays.length : Math.max(0, limit);
+  const board = new Board(game.getSize());
+  const [black, white, empty] = game.getRoot().getSetupStones();
+  board.applySetup(black, white, empty);
+  let stopped = false;
+  for (const [colour, point] of plays.slice(0, count)) {
+    if (point == null) continue;
+    try {
+      board.play(point[0], point[1], colour);
+    } catch (error) {
+      stopped = true;
+      break;
+    }
+  }
+  return { board, plays: plays.slice(0, count), stopped, start };
+}
+
+/**
+ * The position a particular node leads to.
+ *
+ * Unlike positionAfter(), this follows the node's own ancestors rather than
+ * the leftmost variation, so clicking a move inside a variation shows that
+ * variation's position. Setup stones anywhere along the path are applied as
+ * they are met.
+ */
+function positionForNode(game, node) {
+  const chain = [];
+  for (let current = node; current != null; current = current.parent) {
+    chain.push(current);
+  }
+  chain.reverse();                     // root first
+
+  const size = game.getSize();
+  const board = new Board(size);
+  const [black, white, empty] = chain[0].getSetupStones();
+  board.applySetup(black, white, empty);
+
+  let stopped = false;
+  for (const sgfNode of chain.slice(1)) {
+    const [sblack, swhite, sempty] = sgfNode.getSetupStones();
+    if (sblack.length || swhite.length || sempty.length) {
+      board.applySetup(sblack, swhite, sempty);
+    }
+    const [colour, point] = sgfNode.getMove();
+    if (point == null) continue;                 // not a move, or a pass
+    try {
+      board.play(point[0], point[1], colour);
+    } catch (error) {
+      stopped = true;
+      break;
+    }
+  }
+  return { board, stopped };
+}
+
+/** Every node of a tree, depth first, in the order the tree pane shows them. */
+function treeNodes(node) {
+  const nodes = [node];
+  for (const child of node.children) nodes.push(...treeNodes(child));
+  return nodes;
+}
+
+// ---- tools.js ----------------------------------------------------
+/**
+ * The library operations the app exposes: normalise, transform, encoding and
+ * splitting a collection.
+ *
+ * These mirror sgfmill.sgf_normalise, sgfmill.sgf_transform and
+ * sgfmill.sgf_encoding; tests/generate_expected.py produces the answers from
+ * the Python library itself and tests compare the two.
+ */
+
+
+
+
+
+// -- normalise -------------------------------------------------------------
+
+/** Every property FF[4] defines for Go, plus the general ones we keep. */
+const STANDARD_PROPERTIES = new Set([
+  "AB", "AE", "AN", "AP", "AR", "AW", "B", "BL", "BM", "BR", "BT", "C",
+  "CA", "CP", "CR", "DD", "DM", "DO", "DT", "EV", "FF", "FG", "GB", "GC",
+  "GM", "GN", "GW", "HA", "HO", "ID", "IT", "KM", "KO", "L", "LB", "LN",
+  "LT", "MA", "MN", "N", "OB", "ON", "OT", "OW", "PB", "PC", "PL", "PM",
+  "PW", "RE", "RO", "RU", "SL", "SO", "SQ", "ST", "SZ", "TB", "TE", "TM",
+  "TR", "TW", "UC", "US", "V", "VW", "W", "WL", "WR", "WT",
+]);
+
+/** The properties a usable FF[4] game must carry. */
+const MINIMUM_STANDARD_PROPERTIES = new Set(["FF", "GM", "SZ"]);
+
+/** Walk a node and all its descendants, depth first, in tree order. */
+function* walkNodes(node) {
+  yield node;
+  for (const child of node.children) yield* walkNodes(child);
+}
+
+/** A report of what is, or was, non-standard. */
+class GameReport {
+  constructor(findings, removed) {
+    this.findings = findings;      // identifier -> [nodes]
+    this.removed = removed;
+  }
+
+  /** The offending identifiers, sorted. */
+  properties() {
+    return [...this.findings.keys()].sort();
+  }
+
+  /** How many properties were found. */
+  count() {
+    return this.properties().length;
+  }
+
+  /** The nodes carrying at least one of them. */
+  nodes() {
+    const seen = new Set();
+    const nodes = [];
+    for (const list of this.findings.values()) {
+      for (const node of list) {
+        if (!seen.has(node)) {
+          seen.add(node);
+          nodes.push(node);
+        }
+      }
+    }
+    return nodes;
+  }
+
+  /** How many nodes carry at least one of them. */
+  nodeCount() {
+    return this.nodes().length;
+  }
+
+  get ok() {
+    return this.findings.size === 0;
+  }
+}
+
+function checkGame(game, standard = STANDARD_PROPERTIES) {
+  const findings = new Map();
+  for (const node of walkNodes(game.getRoot())) {
+    for (const identifier of node.identifiers().sort()) {
+      if (!standard.has(identifier)) {
+        if (!findings.has(identifier)) findings.set(identifier, []);
+        findings.get(identifier).push(node);
+      }
+    }
+  }
+  return new GameReport(findings, false);
+}
+
+function cleanGame(game, standard = STANDARD_PROPERTIES) {
+  const findings = new Map();
+  for (const node of walkNodes(game.getRoot())) {
+    for (const identifier of node.identifiers().sort()) {
+      if (!standard.has(identifier)) {
+        if (!findings.has(identifier)) findings.set(identifier, []);
+        findings.get(identifier).push(node);
+        node.getRawMap().delete(identifier);
+      }
+    }
+  }
+  return new GameReport(findings, true);
+}
+
+// -- transform -------------------------------------------------------------
+
+const FLIP_VERTICAL = "flip_vertical";
+const FLIP_HORIZONTAL = "flip_horizontal";
+const ROTATE_CW = "rotate_cw";
+const ROTATE_ACW = "rotate_acw";
+const TRANSFORMATIONS = [
+  FLIP_VERTICAL, FLIP_HORIZONTAL, ROTATE_CW, ROTATE_ACW,
+];
+
+const POINT_FUNCTIONS = {
+  [FLIP_VERTICAL]: (row, col, side) => [side - 1 - row, col],
+  [FLIP_HORIZONTAL]: (row, col, side) => [row, side - 1 - col],
+  // Turning the board 90 degrees clockwise takes the top-left corner to the
+  // top-right, as FF[4] specifies ('a' becomes 'i').
+  [ROTATE_CW]: (row, col, side) => [side - 1 - col, row],
+  [ROTATE_ACW]: (row, col, side) => [col, side - 1 - row],
+};
+
+function transformPoint(point, transformation, side) {
+  if (point == null) return null;
+  const fn = POINT_FUNCTIONS[transformation];
+  if (!fn) throw new SgfError(`unknown transformation: ${transformation}`);
+  return fn(point[0], point[1], side);
+}
+
+// Properties holding a single point, and those holding lists of points.
+const POINT_PROPERTIES = new Set(["B", "W"]);
+const POINT_LIST_PROPERTIES = new Set([
+  "AB", "AW", "AE", "CR", "MA", "SL", "SQ", "TR", "TB", "TW",
+]);
+// Elists: the same as a point list, but an empty value is meaningful.
+const ELIST_PROPERTIES = new Set(["DD", "VW"]);
+const PAIR_PROPERTIES = new Set(["AR", "LN"]);
+const LABEL_PROPERTIES = new Set(["LB"]);
+
+/** Transform a game in place. */
+function transformGame(game, transformation) {
+  if (!TRANSFORMATIONS.includes(transformation)) {
+    throw new SgfError(`unknown transformation: ${transformation}`);
+  }
+  const side = game.getSize();
+  for (const node of walkNodes(game.getRoot())) {
+    transformNode(node, transformation, side);
+  }
+  return game;
+}
+
+function transformNode(node, transformation, side) {
+  for (const identifier of node.identifiers()) {
+    const values = node.getRaw(identifier);
+    if (POINT_PROPERTIES.has(identifier)) {
+      node.setRaw(identifier, values.map((value) => {
+        if (value === "") return value;                 // a pass stays a pass
+        const point = interpretGoPoint(value, side);
+        return serialiseGoPoint(transformPoint(point, transformation, side),
+                                side);
+      }));
+    } else if (POINT_LIST_PROPERTIES.has(identifier) ||
+               ELIST_PROPERTIES.has(identifier)) {
+      // sgfmill interprets a point list (expanding any compressed "aa:cc"
+      // rectangles and merging duplicates) and re-serialises it one value per
+      // point, sorted. Matching that keeps the output byte for byte identical
+      // to the library's.
+      const points = interpretPointList(values, side);
+      const serialised = points
+        .map((point) => serialiseGoPoint(
+          transformPoint(point, transformation, side), side))
+        .sort();
+      node.setRaw(identifier, serialised.length === 0 ? [""] : serialised);
+    } else if (PAIR_PROPERTIES.has(identifier)) {
+      // Two points, in order: an arrow keeps pointing the same way.
+      node.setRaw(identifier, values.map((value) => {
+        if (value.length !== 5 || value[2] !== ":") return value;
+        const a = interpretGoPoint(value.slice(0, 2), side);
+        const b = interpretGoPoint(value.slice(3, 5), side);
+        return serialiseGoPoint(transformPoint(a, transformation, side), side) +
+               ":" + serialiseGoPoint(transformPoint(b, transformation, side),
+                                      side);
+      }));
+    } else if (LABEL_PROPERTIES.has(identifier)) {
+      // A label's point moves; its text does not. Their order is kept.
+      node.setRaw(identifier, values.map((value) => {
+        if (value.length < 3 || value[2] !== ":") return value;
+        const point = interpretGoPoint(value.slice(0, 2), side);
+        return serialiseGoPoint(transformPoint(point, transformation, side),
+                                side) + value.slice(2);
+      }));
+    }
+  }
+}
+
+/** A point list as text, eg "D4 Q16"; a compressed list is expanded. */
+function formatPointList(value, side) {
+  if (value === "") return "(empty)";
+  try {
+    return interpretPointList([value], side).map(formatVertex).join(" ");
+  } catch (error) {
+    return "?";
+  }
+}
+
+// -- character encoding ----------------------------------------------------
+
+const UTF8 = "UTF-8";
+
+/** TextDecoder labels, and the name FF[4] files generally use for them. */
+const CHARSET_ALIASES = {
+  "utf-8": "utf-8", "utf8": "utf-8",
+  "iso-8859-1": "iso-8859-1", "iso8859-1": "iso-8859-1",
+  "latin1": "iso-8859-1", "latin-1": "iso-8859-1",
+  "us-ascii": "utf-8", "ascii": "utf-8",
+  "shift-jis": "shift_jis", "shiftjis": "shift_jis", "sjis": "shift_jis",
+  "euc-jp": "euc-jp", "eucjp": "euc-jp",
+  "gb2312": "gbk", "gbk": "gbk", "gb18030": "gb18030",
+  "big5": "big5", "euc-kr": "euc-kr",
+  "utf-16": "utf-16le", "utf-16le": "utf-16le", "utf-16be": "utf-16be",
+};
+
+const DISPLAY_NAMES = {
+  "utf-8": "UTF-8",
+  "iso-8859-1": "ISO-8859-1",
+  "shift_jis": "Shift_JIS",
+  "euc-jp": "EUC-JP",
+  "gbk": "GBK",
+  "gb18030": "GB18030",
+  "big5": "BIG5",
+  "euc-kr": "EUC-KR",
+  "utf-16le": "UTF-16LE",
+  "utf-16be": "UTF-16BE",
+};
+
+/** A charset name from a CA property, mapped to a TextDecoder label. */
+function normaliseCharsetName(name) {
+  const cleaned = String(name).trim().toLowerCase().replace(/[_ ]/g, "-");
+  const label = CHARSET_ALIASES[cleaned];
+  if (!label) return null;
+  try {
+    new TextDecoder(label, { fatal: true });   // is this label supported?
+    return label;
+  } catch (error) {
+    return null;
+  }
+}
+
+/** The name to show a user for a TextDecoder label. */
+function displayCharsetName(label) {
+  return DISPLAY_NAMES[label] || label;
+}
+
+/** Read the CA property as text, without needing to know the encoding yet. */
+function declaredCharset(bytes) {
+  // CA's value is ASCII, so decoding the whole file as Latin-1 to read it is
+  // safe whatever the file really is.
+  const text = new TextDecoder("iso-8859-1").decode(bytes);
+  const match = /(?:^|[^A-Za-z])CA\[((?:\\.|[^\]\\])*)\]/.exec(text);
+  if (!match) return null;
+  return match[1].replace(/\\(.)/g, "$1");
+}
+
+/**
+ * Work out the encoding of some SGF bytes.
+ *
+ * Follows sgfmill.sgf_encoding.detect_bytes: a byte order mark wins, then the
+ * declared CA, then UTF-8, then ISO-8859-1 (which decodes anything).
+ */
+function detectEncoding(bytes) {
+  const hasBom = bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb &&
+                 bytes[2] === 0xbf;
+  const asciiOnly = bytes.every((byte) => byte < 0x80);
+  let declared = hasBom ? UTF8 : declaredCharset(bytes);
+  const declaredCodec = declared == null ? null : normaliseCharsetName(declared);
+
+  if (hasBom) {
+    return { encoding: UTF8, declared: UTF8, mismatch: false, asciiOnly: false,
+             hasBom: true };
+  }
+  if (asciiOnly && declared != null) {
+    // Every ASCII-compatible encoding agrees on these bytes, so there is
+    // nothing to detect and nothing that would need converting.
+    const name = declaredCodec == null
+      ? declared
+      : displayCharsetName(declaredCodec);
+    return { encoding: name, declared: name, mismatch: false, asciiOnly: true,
+             hasBom: false };
+  }
+
+  const order = declaredCodec == null
+    ? ["utf-8", "iso-8859-1"]
+    : [declaredCodec, "utf-8", "iso-8859-1"];
+  const tried = [];
+  for (const candidate of order) {
+    if (tried.includes(candidate)) continue;
+    tried.push(candidate);
+    if (canDecode(bytes, candidate)) {
+      const encoding = displayCharsetName(candidate);
+      // As in sgfmill, the declared name is compared as written: a file that
+      // says something other than what it turned out to be is a mismatch.
+      return {
+        encoding,
+        declared,
+        mismatch: declared !== encoding,
+        asciiOnly,
+        hasBom: false,
+      };
+    }
+  }
+  throw new SgfError(`can't determine the encoding of the SGF data (tried ${
+    tried.join(", ")})`);
+}
+
+function canDecode(bytes, label) {
+  try {
+    new TextDecoder(label, { fatal: true }).decode(bytes);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/** Decode SGF bytes using a name from detectEncoding(). */
+function decodeBytes(bytes, label) {
+  const decoder = new TextDecoder(label === UTF8 ? "utf-8" : label,
+                                  { fatal: false });
+  return decoder.decode(bytes);
+}
+
+/** Set CA[UTF-8] so a written file says what it is. */
+function convertGameToUtf8(game) {
+  game.getRoot().setRaw("CA", [UTF8]);
+  return game;
+}
+
+/** Describe an encoding result the way the app's report shows it. */
+function describeEncoding(result) {
+  const parts = [result.encoding];
+  if (result.encoding === UTF8 && !result.mismatch) {
+    parts.push("UTF-8, as files should be");
+  }
+  if (result.asciiOnly) parts.push("ASCII only");
+  return parts.join("; ");
+}
+
+// -- splitting a collection ------------------------------------------------
+
+/** Split a collection of games into separate serialised records. */
+function splitCollection(text) {
+  return parseSgfCollection(text);
+}
+
+// ---- app.js ------------------------------------------------------
+/**
+ * SGF Toolkit (web): the interface.
+ *
+ * The work is split the same way as the desktop app in App/: the panels run
+ * explorer -> actions -> tree -> results, and the message bar describes the
+ * highlighted action. Everything the app does is done by the library port in
+ * the other modules; this file only wires it to the page.
+ */
+
+
+
+
+
+
+
+// -- what the app can do ---------------------------------------------------
+
+const OPERATIONS = [
+  {
+    id: "board",
+    label: "Show board position",
+    prompt: "Move number (blank = final position)",
+    help: ["Show the position after a given number of moves.",
+           "A move number, or blank for the final position.",
+           "Board tab."],
+  },
+  {
+    id: "tree",
+    label: "Show tree (click a move)",
+    prompt: null,
+    help: ["Show the whole game as a tree, variations and all.",
+           "Click (or press Enter on) a move to see its position.",
+           "Board tab; the tree is on the left."],
+  },
+  {
+    id: "info",
+    label: "Show game information",
+    prompt: null,
+    help: ["Summarise the game: players, result, komi, size.",
+           "Info tab."],
+  },
+  {
+    id: "properties",
+    label: "List properties in the tree",
+    prompt: null,
+    help: ["List every node of the tree with its properties.",
+           "Info tab."],
+  },
+  {
+    id: "moves",
+    label: "List moves",
+    prompt: null,
+    help: ["List the moves of the main line.",
+           "Info tab."],
+  },
+  {
+    id: "check",
+    label: "Check for non-standard props",
+    prompt: null,
+    help: ["Report properties FF[4] does not define for Go.",
+           "Info tab."],
+  },
+  {
+    id: "clean",
+    label: "Clean non-standard → file",
+    prompt: "Output file",
+    suffix: "-clean",
+    help: ["Remove the properties FF[4] does not define for Go.",
+           "A file name to write.", "A download; the file you opened is left alone."],
+  },
+  {
+    id: "to_utf8",
+    label: "Convert to UTF-8 → file",
+    prompt: "Output file",
+    suffix: "-utf8",
+    help: ["Rewrite the file as UTF-8, declaring CA[UTF-8].",
+           "A file name to write.", "A download."],
+  },
+  {
+    id: "rotate_cw", label: "Turn board 90 clockwise",
+    prompt: "Output file", suffix: "-rotate_cw", transform: ROTATE_CW,
+    help: ["Turn the board a quarter-turn clockwise.",
+           "Choosing it again turns it again, so four times returns to the start.",
+           "A preview; Run writes it."],
+  },
+  {
+    id: "rotate_acw", label: "Turn board 90 anticlockwise",
+    prompt: "Output file", suffix: "-rotate_acw", transform: ROTATE_ACW,
+    help: ["Turn the board a quarter-turn anticlockwise.",
+           "Choosing it again turns it again, so four times returns to the start.",
+           "A preview; Run writes it."],
+  },
+  {
+    id: "flip_v", label: "Flip board vertically",
+    prompt: "Output file", suffix: "-flip_v", transform: FLIP_VERTICAL,
+    help: ["Mirror the board left to right.",
+           "Choosing it twice returns the board to where it started.",
+           "A preview; Run writes it."],
+  },
+  {
+    id: "flip_h", label: "Flip board horizontally",
+    prompt: "Output file", suffix: "-flip_h", transform: FLIP_HORIZONTAL,
+    help: ["Mirror the board top to bottom.",
+           "Choosing it twice returns the board to where it started.",
+           "A preview; Run writes it."],
+  },
+  {
+    id: "split",
+    label: "Split collection → files",
+    prompt: "Base name for the parts",
+    suffix: "",
+    help: ["Write one file for each game in a collection.",
+           "The name to build the parts from.", "Several downloads."],
+  },
+  {
+    id: "save",
+    label: "Save back to a file",
+    prompt: null,
+    help: ["Write the game out again, as UTF-8.",
+           "A download of the file you opened."],
+  },
+];
+
+const TABS = ["board", "info", "moves", "notes"];
+
+// -- state -----------------------------------------------------------------
+
+const state = {
+  files: [],              // {name, bytes, detection, text, game, error}
+  current: null,
+  operation: 0,
+  pending: [],            // transformations awaiting Run
+  previewAction: null,
+  notes: [],
+  downloads: [],          // {name, text} for everything written
+};
+
+// -- small helpers ---------------------------------------------------------
+
+const $ = (selector) => document.querySelector(selector);
+
+function element(tag, options = {}, children = []) {
+  const node = document.createElement(tag);
+  if (options.className) node.className = options.className;
+  if (options.text != null) node.textContent = options.text;
+  if (options.attrs) {
+    for (const [key, value] of Object.entries(options.attrs)) {
+      node.setAttribute(key, value);
+    }
+  }
+  for (const child of children) {
+    node.append(typeof child === "string" ? document.createTextNode(child)
+                                         : child);
+  }
+  return node;
+}
+
+function baseName(name) {
+  return name.replace(/\.sgf$/i, "");
+}
+
+/** The last part of a path, for showing a file that was dragged in. */
+function leafName(name) {
+  return String(name).split(/[\\/]/).pop();
+}
+
+// -- loading files ---------------------------------------------------------
+
+/**
+ * Read a File's bytes.
+ *
+ * Blob.arrayBuffer() is the modern way, but it is comparatively recent (and
+ * some environments, including the DOM implementation the tests use, have
+ * FileReader without it), so fall back to FileReader.
+ */
+function readFileBytes(file) {
+  if (typeof file.arrayBuffer === "function") {
+    return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(new Uint8Array(reader.result));
+    reader.onerror = () => reject(reader.error ||
+                                  new Error("the file could not be read"));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Load files into the explorer.
+ *
+ * Takes an iterable of File objects. They are copied into a plain array before
+ * anything is awaited, because the FileList a file input hands out can be
+ * emptied by clearing the input (which the change handler does), and reading
+ * it while it is being emptied can quietly yield nothing at all.
+ */
+async function loadFiles(files) {
+  const list = Array.from(files || []);
+  if (list.length === 0) {
+    note("No file was chosen.", "warn");
+    return;
+  }
+  for (const file of list) {
+    let bytes;
+    try {
+      bytes = await readFileBytes(file);
+    } catch (error) {
+      note(`Could not read ${file.name}: ${error.message}`, "error");
+      continue;
+    }
+    loadOne(file.name, bytes);
+  }
+  renderFileList();
+  if (state.files.length > 0) selectFile(state.files.length - 1);
+}
+
+function loadOne(name, bytes) {
+  const record = { name: leafName(name), bytes, game: null, games: [], error: null };
+  try {
+    record.detection = detectEncoding(bytes);
+    const label = record.detection.encoding === "UTF-8"
+      ? "utf-8"
+      : record.detection.encoding.toLowerCase();
+    record.text = decodeBytes(bytes, label).replace(/^\uFEFF/, "");
+    record.games = parseSgfCollection(record.text);
+    record.game = record.games[0];
+  } catch (error) {
+    record.error = error.message;
+  }
+  state.files.push(record);
+  note(`${record.error ? "Could not read" : "Opened"} ${record.name}${
+    record.error ? ": " + record.error : ""}`,
+  record.error ? "error" : "ok");
+}
+
+function renderFileList() {
+  const list = $("#files");
+  list.replaceChildren();
+  for (const [index, record] of state.files.entries()) {
+    const item = element("li", {
+      text: record.name + (record.error ? "  (unreadable)" : ""),
+      attrs: { "aria-selected": record === state.current ? "true" : "false" },
+    });
+    if (record.error) item.classList.add("bad");
+    item.title = record.error || record.name;
+    item.addEventListener("click", () => selectFile(index));
+    list.append(item);
+  }
+  if (state.files.length === 0) {
+    list.append(element("li", { className: "hint", text: "No files yet" }));
+  }
+}
+
+function selectFile(index) {
+  const record = state.files[index];
+  if (!record) return;
+  state.current = record;
+  state.pending = [];
+  state.previewAction = null;
+  renderFileList();
+  if (record.error) {
+    setTargetBar(`${record.name}: ${record.error}`);
+    $("#board-view").textContent = "";
+    $("#board-caption").textContent = "";
+    return;
+  }
+  setTargetBar(targetDescription(record));
+  drawFinalPosition();
+  renderFileList();
+  note(`Opened ${record.name}`, "ok");
+}
+
+function targetDescription(record) {
+  const parts = [record.name, `${record.bytes.length} bytes`];
+  if (record.detection) {
+    parts.push(`SZ ${record.game.getSize()}`);
+    parts.push(`${record.games.length} game${record.games.length === 1 ? "" : "s"}`);
+    parts.push(record.detection.encoding);
+  }
+  return parts.join("   ");
+}
+
+function setTargetBar(text) {
+  $("#target-bar").textContent = text;
+  const record = state.current;
+  $("#target-summary").textContent = record ? record.name : "";
+}
+
+// -- the board -------------------------------------------------------------
+
+function drawFinalPosition() {
+  drawPosition(() => positionAfter(state.current.game), captionForFinal());
+}
+
+/** The caption above the board: the file, then the position it shows. */
+function captionForFinal() {
+  const record = state.current;
+  const [black, white] = record.game.getRoot().getSetupStones();
+  const [, plays] = getSetupAndMoves(record.game);
+  const passes = plays.filter(([, point]) => point == null).length;
+  const moves = plays.length - passes;
+  const stones = black.length + white.length;
+  const parts = [`${plays.length} move${plays.length === 1 ? "" : "s"}`];
+  if (passes) parts.push(`${passes} pass${passes === 1 ? "" : "es"}`);
+  if (moves) parts.push(`${moves} stone${moves === 1 ? "" : "s"} by the moves`);
+  if (stones) parts.push(`${stones} setup stone${stones === 1 ? "" : "s"}`);
+  return {
+    text: `final position: ${parts.join(", ")}`,
+    classes: [],
+  };
+}
+
+/**
+ * Draw whatever the given function returns.
+ *
+ * The function returns {board, stopped, } so the caller decides which position
+ * is wanted; the caption says what is being shown.
+ */
+function drawPosition(getPosition, caption) {
+  let result;
+  try {
+    result = getPosition();
+  } catch (error) {
+    $("#board-view").textContent = String(error.message || error);
+    return;
+  }
+  if (result.stopped) {
+    note("Stopped early: the file contains an illegal move.", "warn");
+  }
+  $("#board-view").textContent = renderBoard(result.board);
+  const captionNode = $("#board-caption");
+  captionNode.replaceChildren();
+  if (state.current) {
+    captionNode.append(element("span", { text: state.current.name }), "   ");
+  }
+  const span = element("span", { text: caption.text });
+  for (const className of caption.classes) span.classList.add(className);
+  captionNode.append(span);
+  if (caption.note) {
+    captionNode.append("   ", element("span", { className: "dim",
+                                                text: caption.note }));
+  }
+  showTab("board");
+}
+
+function drawPreview() {
+  const pending = state.pending;
+  drawPosition(() => {
+    const copy = parseSgfCollection(serialiseGame(state.current.game))[0];
+    for (const transformation of pending) transformGame(copy, transformation);
+    return positionAfter(copy);
+  }, {
+    text: `PREVIEW: ${describeTransforms(pending)}`,
+    classes: ["preview"],
+    note: `${pending.length} applied, Run writes it`,
+  });
+}
+
+/** Describe a run of transformations, collapsing repeats. */
+function describeTransforms(pending) {
+  const words = pending.map((transformation) => {
+    const operation = OPERATIONS.find((o) => o.transform === transformation);
+    return operation ? operation.label.replace(/^Flip board /, "")
+      .replace(/^Turn board /, "").toLowerCase() : transformation;
+  });
+  if (words.length === 1) return words[0];
+  if (new Set(words).size === 1) return `${words.length} x ${words[0]}`;
+  return words.join(" then ");
+}
+
+// -- the action list -------------------------------------------------------
+
+function renderOperations() {
+  const list = $("#operations");
+  list.replaceChildren();
+  for (const [index, operation] of OPERATIONS.entries()) {
+    const item = element("li", {
+      text: operation.label,
+      attrs: {
+        role: "option",
+        "aria-selected": index === state.operation ? "true" : "false",
+        "data-index": String(index),
+      },
+    });
+    item.addEventListener("click", () => chooseOperation(index));
+    item.addEventListener("mouseenter", () => highlightOperation(index));
+    list.append(item);
+  }
+}
+
+let highlighted = 0;
+
+function highlightOperation(index) {
+  highlighted = index;
+  for (const item of $("#operations").children) {
+    const isThis = Number(item.dataset.index) === index;
+    item.setAttribute("aria-selected", isThis ? "true" : "false");
+  }
+  const operation = OPERATIONS[index];
+  updateParameterBox(operation);
+  updateMessage(operation);
+}
+
+/** Choosing an action is what runs it, and what applies a transformation. */
+function chooseOperation(index) {
+  highlightOperation(index);
+  state.operation = index;
+  const operation = OPERATIONS[index];
+  if (operation.transform) {
+    applyTransform(operation.transform);
+    return;
+  }
+  if (!requireFile()) return;
+  if (operation.prompt) {
+    $("#param-input").focus();
+    return;
+  }
+  runOperation();
+}
+
+function applyTransform(transformation) {
+  if (!requireFile()) return;
+  if (state.previewAction !== transformation) {
+    // A different transformation starts again from the file's board.
+    state.pending = [];
+    state.previewAction = transformation;
+  }
+  state.pending.push(transformation);
+  drawPreview();
+  updateMessage(OPERATIONS.find((o) => o.transform === transformation));
+}
+
+function applyAgain() {
+  const operation = OPERATIONS[state.operation];
+  if (!operation || !operation.transform) {
+    note("Choose a flip or a turn first; there is nothing to apply.", "warn");
+    return;
+  }
+  applyTransform(operation.transform);
+}
+
+function resetPreview() {
+  if (state.pending.length === 0) return;
+  state.pending = [];
+  state.previewAction = null;
+  if (state.current) {
+    drawFinalPosition();
+    note("Preview reset to the file's position.");
+  }
+}
+
+function updateParameterBox(operation) {
+  const input = $("#param-input");
+  const label = $("#param-label");
+  if (!operation.prompt || !state.current) {
+    label.textContent = "no parameters";
+    input.value = "";
+    input.disabled = true;
+    return;
+  }
+  label.textContent = `${state.current.name}  ${operation.prompt}`;
+  input.disabled = false;
+  input.value = suggestedOutput(operation);
+}
+
+function suggestedOutput(operation) {
+  const entry = state.current || state.files[0];
+  const stem = baseName(entry ? entry.name : "game");
+  const suffix = operation.suffix || "";
+  return `${stem}${suffix}.sgf`;
+}
+
+function updateMessage(operation) {
+  const target = state.current ? `   [${state.current.name}]` : "";
+  const lines = operation.help;
+  const text = lines.length > 1
+    ? `${lines[0]}   ${lines[1]}${target}   → ${lines[2]}`
+    : `${lines[0]}${target}`;
+  $("#message").textContent = text;
+}
+
+// -- running an action -----------------------------------------------------
+
+function requireFile() {
+  if (state.current && !state.current.error) return true;
+  note("Choose an .sgf file in the explorer first.", "warn");
+  return false;
+}
+
+function runOperation() {
+  const operation = OPERATIONS[state.operation];
+  if (!operation) return;
+  if (!requireFile()) return;
+  try {
+    if (operation.transform) {
+      if (state.pending.length === 0) {
+        note("Choose this action first, so there is a transformation to save.",
+             "warn");
+        return;
+      }
+      writeTransformed();
+      return;
+    }
+    const handlers = {
+      board: showBoardAtMove,
+      tree: showTree,
+      info: showGameInformation,
+      properties: showProperties,
+      moves: showMoves,
+      check: showCheck,
+      clean: writeCleaned,
+      to_utf8: writeUtf8,
+      split: writeSplit,
+      save: writeSelf,
+    };
+    const handler = handlers[operation.id];
+    if (handler) handler();
+    else note(`Not implemented: ${operation.id}`, "error");
+  } catch (error) {
+    note(`${operation.label} failed: ${error.message}`, "error");
+    showTab("notes");
+  }
+}
+
+function outputName(operation) {
+  const value = $("#param-input").value.trim();
+  if (value) return value;
+  return suggestedOutput(operation);
+}
+
+function currentOperation() {
+  return OPERATIONS[state.operation];
+}
+
+// -- read-only actions -----------------------------------------------------
+
+function showBoardAtMove() {
+  const value = $("#param-input").value.trim();
+  const record = state.current;
+  const [, plays] = getSetupAndMoves(record.game);
+  if (value === "") {
+    drawFinalPosition();
+    return;
+  }
+  const index = Number(value);
+  if (!Number.isInteger(index) || index < 1 || index > plays.length + 1) {
+    note(`Not a move number: ${value} (the game has ${plays.length}).`,
+         "warn");
+    return;
+  }
+  // "Before move N" is the position with the first N-1 moves played.
+  drawPosition(() => positionAfter(record.game, index - 1), {
+    text: `before move ${index}`,
+    classes: [],
+  });
+}
+
+function showTree() {
+  const record = state.current;
+  const container = $("#tree");
+  container.replaceChildren();
+  const side = record.game.getSize();
+
+  const addNode = (node, depth, parentElement) => {
+    const row = element("div", {
+      className: "node" + (nodeLabel(node, side).startsWith("B ") ||
+                          nodeLabel(node, side).startsWith("W ") ? "" : " setup"),
+      attrs: { role: "treeitem" },
+    });
+    row.append(element("span", { className: "guide",
+                                text: "  ".repeat(depth) + (depth ? "└ " : "") }));
+    row.append(element("span", { className: "label", text: nodeLabel(node, side) }));
+    row.dataset.index = String(nodeIndex.get(node));
+    row.addEventListener("click", () => selectTreeNode(node, row));
+    parentElement.append(row);
+    for (const child of node.children) addNode(child, depth + 1, parentElement);
+  };
+
+  const nodes = treeNodes(record.game.getRoot());
+  const nodeIndex = new Map(nodes.map((node, index) => [node, index]));
+  addNode(record.game.getRoot(), 0, container);
+  note(`Tree: ${nodes.length} nodes. Click a move to see its position.`, "ok");
+  showTab("board");
+}
+
+function nodeLabel(node, side) {
+  const move = nodeMoveLabel(node);
+  if (move) return move;
+  const identifiers = node.identifiers().sort();
+  if (identifiers.length === 0) return "(empty)";
+  const interesting = identifiers.filter((id) =>
+    !["FF", "GM", "SZ", "CA", "AP", "ST"].includes(id));
+  if (interesting.length === 0) {
+    return `${identifiers.length} propert${identifiers.length === 1 ? "y" : "ies"}`;
+  }
+  const shown = interesting.slice(0, 4).join(" ");
+  return interesting.length > 4
+    ? `${shown} +${interesting.length - 4}` : shown;
+}
+
+function selectTreeNode(node, row) {
+  for (const other of $("#tree").children) {
+    other.setAttribute("aria-selected", other === row ? "true" : "false");
+  }
+  const side = state.current.game.getSize();
+  const { board } = positionForNode(state.current.game, node);
+  $("#board-view").textContent = renderBoard(board);
+  const label = nodeLabel(node, side);
+  const captionNode = $("#board-caption");
+  captionNode.replaceChildren();
+  captionNode.append(element("span", { text: state.current.name }), "   ",
+                     element("span", { className: "preview", text: `at ${label}` }));
+  showTab("board");
+  note(`Showing the position at ${label}.`);
+}
+
+function showGameInformation() {
+  const game = state.current.game;
+  const root = game.getRoot();
+  const rows = [
+    ["File", state.current.name],
+    ["Encoding", state.current.detection.encoding],
+    ["Board size", `${game.getSize()} x ${game.getSize()}`],
+    ["Games in file", String(state.current.games.length)],
+  ];
+  for (const identifier of ["PB", "PW", "BR", "WR", "RE", "KM", "HA", "RU",
+                            "DT", "EV", "GN", "OT", "TM", "PC"]) {
+    const raw = root.getRaw(identifier);
+    if (!raw) continue;
+    rows.push([identifier, raw.join(", ")]);
+  }
+  const nodes = treeNodes(root);
+  rows.push(["Nodes", String(nodes.length)]);
+  rows.push(["Moves (main line)", String(game.mainLine().length - 1)]);
+  $("#info-view").replaceChildren(buildTable(rows, "Game information"));
+  showTab("info");
+}
+
+function showProperties() {
+  const game = state.current.game;
+  const side = game.getSize();
+  const container = element("div");
+  container.append(element("h3", { text: "Properties in the tree" }));
+  for (const [index, node] of treeNodes(game.getRoot()).entries()) {
+    const heading = nodeMoveLabel(node) || `node ${index}`;
+    container.append(element("p", { className: "hint",
+                                    text: `${index}. ${heading}` }));
+    const rows = node.identifiers().sort().map((identifier) => [
+      identifier, describeProperty(identifier, node.getRaw(identifier), side),
+    ]);
+    if (rows.length === 0) {
+      container.append(element("p", { className: "hint", text: "   (no properties)" }));
+    } else {
+      container.append(buildTable(rows));
+    }
+  }
+  $("#info-view").replaceChildren(container);
+  showTab("info");
+}
+
+function describeProperty(identifier, values, side) {
+  const type = PROPERTY_TYPES[identifier];
+  if (type === "pointList" || type === "label" || type === "point") {
+    return values.map((value) => {
+      if (type === "point") {
+        try {
+          return formatVertex(interpretValue(identifier, value, side));
+        } catch (error) {
+          return value;
+        }
+      }
+      return formatPointList(value.replace(/:[^:]*$/, ""), side) +
+             (type === "label" ? value.slice(2) : "");
+    }).join(", ");
+  }
+  return values.join(", ");
+}
+
+function showMoves() {
+  const game = state.current.game;
+  const [, plays] = getSetupAndMoves(game);
+  const list = element("ol", { className: "list" });
+  for (const [colour, point] of plays) {
+    list.append(element("li", {
+      text: `${colour === "b" ? "Black" : "White"} ${formatVertex(point)}`,
+    }));
+  }
+  const container = element("div");
+  container.append(element("h3", { text: `Moves (${plays.length})` }));
+  if (plays.length === 0) {
+    container.append(element("p", { className: "hint", text: "No moves." }));
+  } else {
+    container.append(list);
+  }
+  $("#info-view").replaceChildren(container);
+  showTab("info");
+}
+
+function showCheck() {
+  const report = checkGame(state.current.game);
+  const container = element("div");
+  if (report.ok) {
+    container.append(element("h3", { text: "All properties are standard" }));
+    container.append(element("p", {
+      className: "hint",
+      text: `${report.count()} non-standard properties: none. The file uses only properties FF[4] defines for Go.`,
+    }));
+  } else {
+    container.append(element("h3", {
+      text: `${report.count()} non-standard propert${report.count() === 1 ? "y" : "ies"}`,
+    }));
+    const rows = report.properties().map((identifier) => [
+      identifier, `${report.findings.get(identifier).length} node(s)`,
+    ]);
+    container.append(buildTable(rows, "Not defined by FF[4] for Go"));
+    container.append(element("p", {
+      className: "hint",
+      text: `On ${report.nodeCount()} of ${treeNodes(state.current.game.getRoot()).length} nodes. Clean the file to remove them.`,
+    }));
+  }
+  $("#info-view").replaceChildren(container);
+  showTab("info");
+  note(report.ok ? "No non-standard properties."
+                 : `${report.count()} non-standard properties found.`,
+       report.ok ? "ok" : "warn");
+}
+
+// -- writing actions -------------------------------------------------------
+
+function writeTransformed() {
+  const operation = currentOperation();
+  const copy = parseSgfCollection(serialiseGame(state.current.game))[0];
+  for (const transformation of state.pending) transformGame(copy, transformation);
+  download(outputName(operation), serialiseGame(copy));
+  state.pending = [];
+  state.previewAction = null;
+  drawFinalPosition();
+}
+
+function writeCleaned() {
+  const operation = currentOperation();
+  const copy = parseSgfCollection(serialiseGame(state.current.game))[0];
+  const report = cleanGame(copy);
+  download(outputName(operation), serialiseGame(copy));
+  note(`Cleaned ${state.current.name}: removed ${report.count()} propert${
+    report.count() === 1 ? "y" : "ies"}.`, "ok");
+}
+
+function writeUtf8() {
+  const operation = currentOperation();
+  const copy = parseSgfCollection(serialiseGame(state.current.game))[0];
+  convertGameToUtf8(copy);
+  download(outputName(operation), serialiseGame(copy));
+  note(`Wrote ${outputName(operation)} as UTF-8 (CA[UTF-8]).`, "ok");
+}
+
+function writeSplit() {
+  const operation = currentOperation();
+  const games = state.current.games;
+  const base = baseName(outputName(operation)) || baseName(state.current.name);
+  for (const [index, game] of games.entries()) {
+    download(`${base}-${index + 1}.sgf`, serialiseGame(game));
+  }
+  note(`Split ${state.current.name} into ${games.length} file(s).`, "ok");
+}
+
+function writeSelf() {
+  download(state.current.name, serialiseGame(state.current.game));
+  note(`Wrote ${state.current.name}.`, "ok");
+}
+
+/** Hand a file to the browser. In a test there is no DOM download, so only log. */
+function download(name, text) {
+  state.downloads.push({ name, text });
+  note(`Wrote ${name} (${text.length} characters)`, "ok");
+  if (typeof URL === "undefined" || !URL.createObjectURL) return;
+  const blob = new Blob([text], { type: "application/x-go-sgf;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = element("a", { attrs: { href: url, download: name } });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+// -- the log and tabs ------------------------------------------------------
+
+function note(message, kind = "") {
+  state.notes.push({ message, kind });
+  const list = $("#notes-view");
+  if (list) {
+    const item = element("li", { text: message });
+    if (kind) item.classList.add(kind);
+    list.append(item);
+    list.scrollTop = list.scrollHeight;
+  }
+  // Also show it in the explorer, which is where a file that will not open
+  // gets noticed: a message only in the Notes tab is easy to miss, and a file
+  // that silently does nothing looks like a broken interface.
+  const status = $("#explorer-status");
+  if (status) {
+    status.textContent = message;
+    status.className = "hint" + (kind === "error" ? " bad"
+      : kind === "warn" ? " warn" : "");
+  }
+}
+
+function showTab(name) {
+  if (!TABS.includes(name)) return;
+  for (const button of $("#tabs").children) {
+    button.setAttribute("aria-selected",
+                        button.dataset.tab === name ? "true" : "false");
+  }
+  for (const tab of TABS) {
+    $(`#panel-${tab}`).classList.toggle("active", tab === name);
+  }
+}
+
+function buildTable(rows, section = null) {
+  const table = element("table", { className: "grid" });
+  if (section) {
+    const head = element("tr", { className: "section" });
+    const th = element("th", { attrs: { colspan: "2" } });
+    th.textContent = section;
+    head.append(th);
+    table.append(head);
+  }
+  for (const [name, value] of rows) {
+    const tr = element("tr");
+    tr.append(element("th", { text: name }), element("td", { text: value }));
+    table.append(tr);
+  }
+  return table;
+}
+
+// -- resizable panels ------------------------------------------------------
+
+function setUpResizers() {
+  for (const handle of document.querySelectorAll(".resizer")) {
+    const pane = document.getElementById(handle.dataset.pane);
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = pane.getBoundingClientRect().width;
+      handle.classList.add("dragging");
+      document.body.classList.add("dragging");
+      const move = (moveEvent) => {
+        const width = Math.max(150, Math.min(900,
+          startWidth + (moveEvent.clientX - startX)));
+        pane.style.setProperty("--pane-width", `${width}px`);
+      };
+      const up = () => {
+        handle.classList.remove("dragging");
+        document.body.classList.remove("dragging");
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+      };
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+    });
+  }
+}
+
+// -- wiring ----------------------------------------------------------------
+
+function bindEvents() {
+  $("#file-input").addEventListener("change", (event) => {
+    // Copy the files out first: clearing the input (so the same file can be
+    // chosen again) replaces its FileList.
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    loadFiles(files);
+  });
+
+  const explorer = $("#explorer");
+  for (const type of ["dragenter", "dragover"]) {
+    explorer.addEventListener(type, (event) => {
+      event.preventDefault();
+      explorer.classList.add("drop-target");
+    });
+  }
+  for (const type of ["dragleave", "drop"]) {
+    explorer.addEventListener(type, (event) => {
+      event.preventDefault();
+      explorer.classList.remove("drop-target");
+    });
+  }
+  explorer.addEventListener("drop", (event) => {
+    if (event.dataTransfer && event.dataTransfer.files) {
+      loadFiles(Array.from(event.dataTransfer.files));
+    }
+  });
+
+  $("#run").addEventListener("click", runOperation);
+  $("#apply-again").addEventListener("click", applyAgain);
+  $("#param-input").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      runOperation();
+    }
+  });
+
+  const list = $("#operations");
+  list.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      highlightOperation(Math.min(OPERATIONS.length - 1, highlighted + 1));
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      highlightOperation(Math.max(0, highlighted - 1));
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      chooseOperation(highlighted);
+    }
+  });
+
+  for (const button of $("#tabs").children) {
+    button.addEventListener("click", () => showTab(button.dataset.tab));
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement) return;
+    if (event.ctrlKey && event.key.toLowerCase() === "j") {
+      event.preventDefault();
+      runOperation();
+    } else if (event.ctrlKey && event.key.toLowerCase() === "a") {
+      event.preventDefault();
+      applyAgain();
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      resetPreview();
+    } else if (event.key === "e") {
+      $("#explorer").scrollIntoView?.();
+      document.querySelector(".file-list li")?.focus?.();
+    } else if (event.key === "a") {
+      $("#operations").focus();
+    } else if (event.key === "t") {
+      $("#tree").focus();
+    }
+  });
+}
+
+function start() {
+  renderOperations();
+  renderFileList();
+  setUpResizers();
+  bindEvents();
+  highlightOperation(0);
+  updateMessage(OPERATIONS[0]);
+  updateParameterBox(OPERATIONS[0]);
+  showTab("board");
+}
+
+/**
+ * A small hook for the tests, and for embedding the app in another page.
+ *
+ * The interface never uses it; it exists so that a test (or a host page) can
+ * hand the app bytes without going through a file input.
+ */
+function exposeTestHook() {
+  if (typeof window === "undefined") return;
+  // The watchdog in index.html shows an explanation if this never appears.
+  window.sgfToolkit = {
+    state,
+    operations: OPERATIONS,
+    loadBytes(name, bytes) {
+      loadOne(name, bytes instanceof Uint8Array ? bytes
+                                                : new Uint8Array(bytes));
+      renderFileList();
+      selectFile(state.files.length - 1);
+      return state.current;
+    },
+    chooseOperation,
+    runOperation,
+    applyAgain,
+    resetPreview,
+    showTab,
+    // The text of every file written so far, newest last.
+    downloads: () => state.downloads,
+  };
+  // It started, so take down the "could not start" banner if it appeared.
+  const banner = document.getElementById("boot-error");
+  if (banner) banner.hidden = true;
+}
+
+start();
+exposeTestHook();
+})();
+</script>
+</body>
+</html>

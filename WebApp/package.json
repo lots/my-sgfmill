@@ -6,9 +6,11 @@
   "description": "A web front end for the sgfmill library. The app itself has no runtime dependencies.",
   "license": "MIT",
   "scripts": {
-    "test": "node tests/engine_test.mjs && node tests/ui_test.mjs",
+    "test": "node tests/engine_test.mjs && node tests/ui_test.mjs && node tests/standalone_test.mjs",
     "test:engine": "node tests/engine_test.mjs",
     "test:ui": "node tests/ui_test.mjs",
+    "test:standalone": "node tests/standalone_test.mjs",
+    "build:standalone": "node build_standalone.mjs",
     "serve": "node tests/serve.mjs"
   },
   "devDependencies": {

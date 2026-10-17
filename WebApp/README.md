@@ -21,18 +21,17 @@ WebApp/
 
 ## Running it
 
-**On Windows, double-click `run_web_app.cmd`.** It serves this directory and
-opens your browser at the right address; close the window (or press Ctrl+C) to
-stop it. That is the whole procedure.
+**On Windows, double-click `standalone.html`.** That is the whole app in one
+file — no server, no Python, nothing to install — and it is the simplest way to
+use it locally.
 
 ```
-run_web_app.cmd                  serve on the first free port from 8000
-run_web_app.cmd 8080             try that port first
-run_web_app.cmd --no-browser     serve without opening a browser
+standalone.html              the app in one file; double-click it
+run_web_app.cmd              serve the modular version and open a browser
 ```
 
-Anywhere else, or if you prefer to run the server yourself, serve the directory
-over HTTP — browsers refuse to load ES modules from `file://` URLs:
+Use the served version when developing (it reloads the separate modules rather
+than a built file). Anywhere, or with your own server:
 
 ```bash
 cd WebApp
@@ -44,6 +43,23 @@ node tests/serve.mjs 8000         # or the dependency-free one in the tests
 
 The launcher looks for Python in this order: the repository's `.venv`, then
 `python` on the PATH, then the `py` launcher. Nothing is installed.
+
+### Why there are two versions
+
+Browsers refuse to load ES modules from a `file://` URL, so `index.html` — which
+loads `js/*.js` as modules — has to be served. `standalone.html` is generated
+from the same sources with the modules inlined into one classic script, which a
+browser will happily load from disk.
+
+The modular sources are the truth. Regenerate the single file after changing
+anything in `js/`:
+
+```bash
+node build_standalone.mjs        # or: npm run build:standalone
+```
+
+`tests/standalone_test.mjs` fails if the file is out of date, and also runs it
+from a `file://` URL to prove it still works.
 
 ## Deploying it
 
@@ -141,12 +157,12 @@ Both test scripts also run from the library's own testsuite, as
 ## Troubleshooting
 
 **"Nothing happens when I choose a file."** The app's JavaScript did not load.
-Almost always this is the page being opened as a file rather than served: a
+This is almost always `index.html` opened as a file rather than served: a
 `file://` URL cannot load ES modules, so the page appears but nothing is wired
-up. The page says so — a red banner explains it — so check for that first.
+up. The page says so — a red banner explains it.
 
-**On Windows, double-click `run_web_app.cmd`** and it will be served correctly.
-Otherwise:
+**Open `standalone.html` instead.** It is the same app in one file and needs
+no server. Or serve the modular version:
 
 ```bash
 cd WebApp

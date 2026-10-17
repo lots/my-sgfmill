@@ -94,11 +94,52 @@ def test_web_app_files_are_present(tc):
     """The pieces a static host needs must all be in WebApp/."""
     required = ["index.html", "styles.css", "js/app.js", "js/sgf.js",
                 "js/board.js", "js/moves.js", "js/properties.js",
-                "js/tools.js", "README.md", "serve.py", "run_web_app.cmd"]
+                "js/tools.js", "README.md", "serve.py", "run_web_app.cmd",
+                "standalone.html", "build_standalone.mjs"]
     for name in required:
         path = os.path.join(_WEBAPP, name)
         tc.assertTrue(os.path.exists(path), "missing %s" % name)
         tc.assertGreater(os.path.getsize(path), 0, "%s is empty" % name)
+
+def test_standalone_page_needs_no_server(tc):
+    """standalone.html must not reference anything, so file:// can load it.
+
+    A browser refuses to load ES modules from a file:// URL, which is why the
+    modular version has to be served. The standalone page is the answer for
+    someone who just wants to double-click: everything inlined, one classic
+    script.
+    """
+    path = os.path.join(_WEBAPP, "standalone.html")
+    if not os.path.exists(path):
+        tc.skipTest("standalone.html is not present")
+    with open(path, encoding="utf-8") as f:
+        page = f.read()
+    tc.assertNotIn('type="module"', page,
+                   "standalone.html still loads a module script")
+    tc.assertNotIn('src="js/', page,
+                   "standalone.html still refers to an external script")
+    tc.assertNotIn('href="styles.css"', page,
+                   "standalone.html still refers to an external stylesheet")
+    tc.assertIn("<style>", page)
+    tc.assertIn("use strict", page)
+    # Everything it needs must be inside it.
+    for module in ("properties", "board", "sgf", "moves", "tools", "app"):
+        tc.assertIn("// ---- %s.js" % module, page,
+                    "standalone.html is missing %s.js" % module)
+
+def test_standalone_page_runs(tc):
+    """The standalone page must actually work when opened from a file.
+
+    This is the path a user takes when they double-click it, so it is tested
+    the same way: loaded from the filesystem with no server, in a DOM.
+    """
+    if _node() is None:
+        tc.skipTest("node is not installed")
+    if not os.path.isdir(os.path.join(_WEBAPP, "node_modules", "jsdom")):
+        tc.skipTest("jsdom is not installed; run 'npm install' in WebApp/")
+    ok, output = _run_node("standalone_test.mjs")
+    tc.assertTrue(ok, "standalone tests failed:\n%s" % output[-4000:])
+    tc.assertIn("0 failed", output)
 
 def test_launcher_is_a_batch_file_that_will_parse(tc):
     """run_web_app.cmd must stay ASCII with CRLF line endings.
